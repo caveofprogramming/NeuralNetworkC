@@ -4,7 +4,7 @@ project("Neural Network"    VERSION 1.0
                             DESCRIPTION "Neural network in C++"
                             LANGUAGES CXX)
 
-
+set(CMAKE_BUILD_TYPE Debug)
 
 IF(CMAKE_BUILD_TYPE STREQUAL "Release")
     set(CMAKE_CXX_FLAGS "-Wall -Wextra")
@@ -15,6 +15,7 @@ set(SOURCE_DIR src)
 
 set(SRC_FILES   ${SOURCE_DIR}/main.cpp
                 ${SOURCE_DIR}/matrix.cpp
+                ${SOURCE_DIR}/matrixfunctions.cpp
                 )
 
 
