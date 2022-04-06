@@ -16,6 +16,9 @@ set(SOURCE_DIR src)
 set(SRC_FILES   ${SOURCE_DIR}/main.cpp
                 ${SOURCE_DIR}/matrix.cpp
                 ${SOURCE_DIR}/matrixfunctions.cpp
+                ${SOURCE_DIR}/loader.cpp
+                ${SOURCE_DIR}/testloader.cpp
+                ${SOURCE_DIR}/neuralnet.cpp
                 )
 
 

@@ -2,27 +2,29 @@
 #include <random>
 #include "matrix.h"
 #include "matrixfunctions.h"
+#include "neuralnet.h"
 
 using namespace std;
 using namespace cave;
+
+#include "testloader.h"
 
 int main() {
 
     std::default_random_engine generator;
     std::uniform_real_distribution<double> distribution(-1.0,1.0);
     
-    auto io = generateTestData(5, 4, 6);
+    int batchSize = 5;
+    int items = 12;
+    int inputSize = 3;
+    int outputSize = 5;
 
-    cout << io.first << endl;
-    cout << io.second << endl;
+    TestLoader testLoader(items, inputSize, outputSize, batchSize);
 
-    Matrix sumsquares(1, io.second.cols());
+    NeuralNet neuralNet({inputSize, 3, outputSize});
 
-    io.first.forEach([&](int row, int col, int index, double value){
-        sumsquares[col] += value * value;
-    });
-
-    cout << sumsquares << endl;
+    cout << neuralNet << endl;
+    
 
     return 0;
 }

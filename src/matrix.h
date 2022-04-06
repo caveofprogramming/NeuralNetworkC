@@ -19,6 +19,8 @@ namespace cave
             v_.resize(rows * cols);
         }
 
+        Matrix(int rows, int cols, std::vector<double> values);
+
         Matrix(int rows, int cols, std::function<double()> init) : rows_(rows), cols_(cols)
         {
             v_.resize(rows * cols);
@@ -37,6 +39,7 @@ namespace cave
             });
         }
 
+        Matrix transpose() const;
         Matrix sumColumns();
 
         int rows() 
@@ -57,6 +60,7 @@ namespace cave
 
         void set(int row, int col, double value);
         double get(int row, int col);
+        std::vector<double> get() { return v_; };
 
         double operator[](int index) const
         {

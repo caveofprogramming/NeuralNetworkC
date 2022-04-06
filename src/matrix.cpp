@@ -5,6 +5,15 @@
 
 namespace cave
 {
+    Matrix::Matrix(int rows, int cols, std::vector<double> values)
+    {
+        Matrix m(cols, rows);
+        m.v_ = values;
+        Matrix transposed = m.transpose();
+
+        *this = std::move(transposed);
+    }
+
     std::ostream &operator<<(std::ostream &out, Matrix const &m)
     {
         out << m.str();
@@ -39,6 +48,16 @@ namespace cave
         {
             result.v_[i] = m.v_[i] * a;
         }
+
+        return result;
+    }
+
+    Matrix Matrix::transpose() const
+    {
+        Matrix result(cols_, rows_);
+
+        forEach([&](int row, int col, int index, double value)
+                { result[col * rows_ + row] = value; });
 
         return result;
     }
