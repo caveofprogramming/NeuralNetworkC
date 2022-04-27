@@ -2,6 +2,8 @@
 #include <sstream>
 #include <iomanip>
 #include <assert.h>
+#include <exception>
+#include <cmath>
 
 namespace cave
 {
@@ -11,7 +13,27 @@ namespace cave
         m.v_ = values;
         Matrix transposed = m.transpose();
 
-        *this = std::move(transposed);
+        v_ = std::move(transposed.v_);
+        rows_ = rows;
+        cols_ = cols;
+    }
+
+    bool Matrix::operator==(Matrix const &other)
+    {
+        const double tolerance = 0.0001;
+
+        for(int i = 0; i < v_.size(); ++i)
+        {
+            double value1 = v_[i];
+            double value2 = other.v_[i];
+
+            if(abs(value2 - value1) > tolerance)
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     std::ostream &operator<<(std::ostream &out, Matrix const &m)
@@ -64,7 +86,13 @@ namespace cave
 
     Matrix operator*(const Matrix &m1, const Matrix &m2)
     {
-        assert(m1.cols_ == m2.rows_);
+        if(m1.cols_ != m2.rows_)
+        {
+            std::stringstream ss;
+            ss << "Matrixes cannot be multiplied: ";
+            ss << m1.rows_ << "x" << m1.cols_ << " * " << m2.rows_ << "x" << m2.cols_ << std::endl;
+            throw std::logic_error(ss.str());
+        }
 
         Matrix result(m1.rows_, m2.cols_);
 
@@ -87,7 +115,7 @@ namespace cave
 
     Matrix operator+(const Matrix &m1, const Matrix &m2)
     {
-        assert(m1.rows_ == m2.rows_ && m1.cols_ == m2.cols_);
+        assert(m1.rows_ == m2.rows_ && m1.cols_ == m2.cols_ && "Matrix addition failed.");
 
         return Matrix(m1.rows_, m1.cols_, [&](int index)
                       { return m1[index] + m2[index]; });
@@ -95,7 +123,7 @@ namespace cave
 
     Matrix operator-(const Matrix &m1, const Matrix &m2)
     {
-        assert(m1.rows_ == m2.rows_ && m1.cols_ == m2.cols_);
+        assert(m1.rows_ == m2.rows_ && m1.cols_ == m2.cols_ && "Matrix subtraction failed");
 
         return Matrix(m1.rows_, m1.cols_, [&](int index)
                       { return m1[index] - m2[index]; });
@@ -117,6 +145,18 @@ namespace cave
         return *this;
     }
 
+     Matrix Matrix::apply(std::function<double(int, int, int, double)> f)
+     {
+         Matrix result;
+         result.v_ = v_;
+         result.rows_ = rows_;
+         result.cols_ = cols_;
+
+         result.modify(f);
+
+         return result;
+     }
+
     std::string Matrix::str() const
     {
         std::stringstream ss;
@@ -133,7 +173,7 @@ namespace cave
             }
 
             ss << std::setprecision(6);
-            ss << std::setw(10);
+            ss << std::setw(12);
             ss << value;
             ss << "  "; });
 

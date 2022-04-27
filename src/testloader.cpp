@@ -31,8 +31,8 @@ namespace cave
         
         auto testData = generateTestData(itemsRead, metaData_.inputSize, metaData_.outputSize);
        
-        Matrix input = testData.first.transpose();
-        Matrix output = testData.second.transpose();
+        Matrix input = testData.input.transpose();
+        Matrix output = testData.output.transpose();
 
         BatchData batchData;
 

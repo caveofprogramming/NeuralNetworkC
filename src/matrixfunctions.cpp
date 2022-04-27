@@ -7,31 +7,84 @@
 
 namespace cave
 {
+    Matrix incrementElement(const Matrix &m, int row, int col, double increment)
+    {
+        Matrix copy = m;
 
-    Matrix getGreatestRowNumbers(Matrix input)
+        double value = copy.get(row, col);
+        copy.set(row, col, value + increment);
+
+        return copy;
+    }
+
+    Matrix gradient(Matrix *input, std::function<Matrix()> func)
+    {
+        const double inc = 0.000001;
+
+        Matrix result(input->rows(), input->cols());
+
+        Matrix output1 = func();
+
+        for (int row = 0; row < input->rows(); ++row)
+        {
+            for (int col = 0; col < input->cols(); ++col)
+            {
+                double value = input->get(row, col);
+
+                input->set(row, col, value + inc);
+
+                Matrix output2 = func();
+
+                double rate = (output2.get(col) - output1.get(col))/inc;
+                result.set(row, col, rate);
+
+                if(abs(rate) > 2E5)
+                {
+                    std::cout << "output1: " << output1.get(row, col) << std::endl;
+                    std::cout << "output2: " << output2.get(row, col) << std::endl;
+                    std::cout << "output::: " << output1 << std::endl;
+                    std::cout << "diff: " << output2.get(row, col) - output1.get(row, col) << std::endl;
+                    std::cout << "inc: " << inc << std::endl;
+                    std::cout << "rate: " << rate << std::endl;
+                    std::cout << "\n" << std::endl;
+                }
+
+                input->set(row, col, value);
+            }
+        }
+
+        return result;
+    }
+
+    Matrix getGreatestRowNumbers(Matrix &input)
     {
         Matrix result(1, input.cols());
 
         std::vector<double> maxValues(input.cols());
 
-        input.forEach([&](int row, int col, int index, double value){
+        input.forEach([&](int row, int col, int index, double value)
+                      {
             if(value > maxValues[col])
             {
                 maxValues[col] = value;
                 result[col] = row;
-            }
-        });
+            } });
 
         return result;
     }
 
-    Matrix crossEntropy(Matrix actual, Matrix expected)
+    Matrix square(Matrix input)
+    {
+        return input.modify([](int row, int col, int index, double value){ return value*value; });
+    }
+
+    Matrix crossEntropy(Matrix &actual, Matrix &expected)
     {
         Matrix result(1, actual.cols());
 
         Matrix biggestRows = getGreatestRowNumbers(expected);
 
-        for(int col = 0; col < actual.cols(); ++col)
+        for (int col = 0; col < actual.cols(); ++col)
         {
             int activeRow = biggestRows[col];
             double actualValue = actual.get(activeRow, col);
@@ -41,7 +94,7 @@ namespace cave
         return result;
     }
 
-    std::pair<Matrix, Matrix> generateTestData(int items, int inputSize, int outputSize)
+    IO generateTestData(int items, int inputSize, int outputSize)
     {
         std::default_random_engine generator;
         std::random_device rd;
@@ -76,17 +129,21 @@ namespace cave
                 input.set(row, col, radius * value / distance);
             }
         }
-       
-        return std::make_pair(input, output);
+
+        IO io;
+        io.input = std::move(input);
+        io.output = std::move(output);
+
+        return io;
     }
 
-    Matrix relu(Matrix input)
+    Matrix relu(Matrix &input)
     {
         return Matrix(input.rows(), input.cols(), [&](int index)
                       { return input[index] > 0 ? input[index] : 0; });
     }
 
-    Matrix softmax(Matrix input)
+    Matrix softmax(Matrix &input)
     {
         Matrix result(input.rows(), input.cols());
 
