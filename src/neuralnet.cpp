@@ -24,7 +24,7 @@ namespace cave
 
             if (transform == NeuralNet::DENSE)
             {
-                Matrix weight = neuralNet.weights_[weightIndex++];
+                Matrix &weight = neuralNet.weights_[weightIndex++];
                 out << " " << weight.rows() << " x " << weight.cols();
             }
 
@@ -58,8 +58,8 @@ namespace cave
 
             Matrix bias(rows, 1);
 
-            weights_.push_back(weight);
-            biases_.push_back(bias);
+            weights_.push_back(std::move(weight));
+            biases_.push_back(std::move(bias));
         }
 
         transforms_.push_back(transform);
@@ -73,14 +73,16 @@ namespace cave
 
     Matrix NeuralNet::predict(Matrix &input)
     {
+        Matrix in = input.clone();
+
         if (weights_.size() > 0)
         {
             assert(input.rows() == weights_[0].cols());
         }
 
-        BatchResult result = runForwards(input);
+        BatchResult result = runForwards(in);
 
-        return result.io.back();
+        return std::move(result.io.back());
     }
 
     std::vector<double> NeuralNet::predict(std::vector<double> input)
@@ -118,132 +120,143 @@ namespace cave
     void NeuralNet::fit(Matrix &input, Matrix &expected)
     {
         BatchResult batchResult = runForwards(input);
-        batchResult = runBackwards(batchResult, expected);
+        runBackwards(batchResult, expected);
         adjust(batchResult);
     }
 
-    BatchResult NeuralNet::runForwards(Matrix input)
+    BatchResult NeuralNet::runForwards(Matrix &input)
     {
         int weightIndex = 0;
 
         BatchResult result;
 
-        result.io.push_back(input);
+        result.io.push_back(std::move(input));
+
+        int ioIndex = 0;
 
         for (Transform transform : transforms_)
         {
+            Matrix &output = result.io.back();
+
             switch (transform)
             {
             case DENSE:
             {
-                result.weightInputs.push_back(input);
+                result.weightInputs.push_back(ioIndex);
 
                 Matrix &weight = weights_[weightIndex];
                 Matrix &bias = biases_[weightIndex];
 
-                input = (weight * input).modify([&](int row, int col, int index, double value)
-                                                { return value + bias.get(row); });
+                input = (weight * result.io.back());
+
+                input.modify([&](int row, int col, int index, double value)
+                             { return value + bias.get(row); });
 
                 ++weightIndex;
             }
             break;
             case RELU:
-                input = relu(input);
+                input = relu(result.io.back());
                 break;
             case SOFTMAX:
-                input = softmax(input);
+                input = softmax(result.io.back());
                 break;
             }
 
-            result.io.push_back(input);
+            result.io.push_back(std::move(input));
+
+            ++ioIndex;
         }
 
         return result;
     }
 
-    BatchResult NeuralNet::runBackwards(BatchResult batchResult, Matrix expected)
+    void NeuralNet::runBackwards(BatchResult &batchResult, Matrix &expected)
     {
-        auto io = batchResult.io;
+        std::cout << "run backwards" << std::endl;
+        auto &io = batchResult.io;
 
-        Matrix output = io.back();
+        Matrix &output = io.back();
 
-        if(transforms_.back() != SOFTMAX)
+        if (transforms_.back() != SOFTMAX)
         {
             throw std::logic_error("Final transform must be SOFTMAX.");
         }
 
-        Matrix error = output - expected;
-
-        batchResult.errors.push_front(error);
         auto weightIt = weights_.rbegin();
+
+        Matrix error;
 
         for (int i = transforms_.size() - 1; i >= 0; --i)
         {
             Transform transform = transforms_[i];
-            Matrix input = io[i];
-            Matrix output = io[i+1];
+            Matrix &input = io[i];
+            Matrix &output = io[i + 1];
 
             switch (transform)
             {
             case DENSE:
             {
-                Matrix weight = *weightIt;
+                Matrix &weight = *weightIt;
                 ++weightIt;
 
-                if(weightIt == weights_.rend())
+                if (weightIt == weights_.rend())
                 {
-                    break;
+                    // break;
                 }
 
-                error = weight.transpose() * error;
+                error = weight.transpose() * batchResult.errors.front();
             }
             break;
             case RELU:
-               
-                error = error.apply([&](int row, int col, int index, double value){
+
+                // clang-format off
+                error = batchResult.errors.front().apply([&](int row, int col, int index, double value)
+                {
                     if(input.get(row, col) < 0)
                     {
                         return 0.0;
                     }
 
-                    return value;
+                    return value; 
                 });
- 
+                // clang-format on
+
                 break;
             case SOFTMAX:
-                
+                error = output - expected;
                 break;
             }
+
+            batchResult.errors.push_front(std::move(error));
         }
-
-        batchResult.errors.push_front(error);
-
-        return batchResult;
     }
 
-     void NeuralNet::adjust(BatchResult batchResult)
-     {
-         std::lock_guard guard(mtxWeights_);
+    void NeuralNet::adjust(BatchResult &batchResult)
+    {
+        std::lock_guard guard(mtxWeights_);
 
-         std::cout << weights_.size() << std::endl;
-         std::cout << biases_.size() << std::endl;
-         std::cout << batchResult.errors.size() << std::endl;
-         std::cout << batchResult.io.size() << std::endl;
+        std::cout << "errors size: " << batchResult.errors.size() << std::endl;
+        std::cout << "io size: " << batchResult.io.size() << std::endl;
 
-         for(int i = 0; i < weights_.size(); ++i)
-         {
-             Matrix weight = weights_[i];
-             Matrix bias = biases_[i];
-             Matrix error = batchResult.errors[i];
-             Matrix input = batchResult.io[i];
+        for (int i = 0; i < weights_.size(); ++i)
+        {
+            Matrix &weight = weights_[i];
+            Matrix &bias = biases_[i];
+            Matrix &error = batchResult.errors[i];
+            Matrix &input = batchResult.io[i];
 
-             std::cout << "\n\n" << i << std::endl;
-             std::cout << "WEIGHT: " << weight.rows() << "x" << weight.cols() << std::endl;
-             std::cout << "BIAS: " << bias.rows() << "x" << bias.cols() << std::endl;
-             std::cout << "ERROR: " << error.rows() << "x" << error.cols() << std::endl;
-             std::cout << "INPUT: " << input.rows() << "x" << input.cols() << std::endl;
-         }
-     }
+            std::cout << "\n\n"
+                      << i << std::endl;
+            std::cout << "WEIGHT: " << weight.rows() << "x" << weight.cols() << std::endl;
+            std::cout << "BIAS: " << bias.rows() << "x" << bias.cols() << std::endl;
+            std::cout << "ERROR: " << error.rows() << "x" << error.cols() << std::endl;
+            std::cout << "INPUT: " << input.rows() << "x" << input.cols() << std::endl;
+        }
+
+        std::cout << "error\n"
+                  << batchResult.errors.front() << std::endl;
+    }
 
     NeuralNet::NeuralNet(std::vector<int> layerSizes)
     {

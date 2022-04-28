@@ -6,7 +6,17 @@ namespace cave
 {
     struct IO
     {
-       
+        IO(Matrix &&input, Matrix &&output)
+        {
+            this->input = std::move(input);
+            this->output = std::move(output);
+        }
+
+        IO(IO &&other)
+        {
+            this->input = std::move(other.input);
+            this->output = std::move(other.output);
+        }
 
         Matrix input;
         Matrix output;

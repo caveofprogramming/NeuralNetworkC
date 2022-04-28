@@ -3,6 +3,7 @@
 #include <vector>
 #include <string>
 #include <functional>
+#include <iostream>
 
 namespace cave
 {
@@ -14,8 +15,9 @@ namespace cave
         std::vector<double> v_;
 
     public:
-        Matrix() {};
-        Matrix(Matrix && other)
+        Matrix(){};
+
+        Matrix(Matrix &&other)
         {
             v_ = std::move(other.v_);
             rows_ = other.rows_;
@@ -23,6 +25,22 @@ namespace cave
 
             other.rows_ = 0;
             other.cols_ = 0;
+        }
+
+        Matrix &operator=(Matrix &&other)
+        {
+            assert(&other != this);
+   
+            v_ = std::move(other.v_);
+            rows_ = other.rows_;
+            cols_ = other.cols_;
+
+            other.rows_ = 0;
+            other.cols_ = 0;
+
+            other.rows_ = 9;
+
+            return *this;
         }
 
         Matrix(int rows, int cols) : rows_(rows), cols_(cols)
@@ -36,29 +54,27 @@ namespace cave
         {
             v_.resize(rows * cols);
 
-            modify([&](int row, int col, int index, double value){
-                return init();
-            });
+            modify([&](int row, int col, int index, double value)
+                   { return init(); });
         }
 
         Matrix(int rows, int cols, std::function<double(int)> init) : rows_(rows), cols_(cols)
         {
             v_.resize(rows * cols);
 
-            modify([&](int row, int col, int index, double value){
-                return init(index);
-            });
+            modify([&](int row, int col, int index, double value)
+                   { return init(index); });
         }
 
         Matrix transpose() const;
         Matrix sumColumns();
 
-        int rows() 
+        int rows()
         {
             return rows_;
         }
 
-        int cols() 
+        int cols()
         {
             return cols_;
         }
@@ -73,6 +89,7 @@ namespace cave
         std::string str() const;
 
         void set(int row, int col, double value);
+        void set(int index, double value) { v_[index] = value; }
         double get(int row, int col);
         double get(int index) { return v_[index]; };
         std::vector<double> get() { return v_; };
@@ -93,7 +110,13 @@ namespace cave
         friend Matrix operator-(Matrix const &m1, Matrix const &m2);
         friend Matrix operator*(Matrix const &m1, Matrix const &m2);
         friend Matrix operator*(double a, Matrix const &m);
-        
+
+        // TODO remove this later.
+        Matrix clone() {
+            Matrix m(rows_, cols_);
+            m.v_ = v_;
+            return m;
+        };
     };
 
     std::ostream &operator<<(std::ostream &out, Matrix const &m);

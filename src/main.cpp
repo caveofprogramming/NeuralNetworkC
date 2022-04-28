@@ -56,14 +56,15 @@ int main()
     neuralNet.add(NeuralNet::RELU);
     neuralNet.add(NeuralNet::DENSE, outputSize);
     neuralNet.add(NeuralNet::SOFTMAX);
-
     cout << neuralNet << endl;
 
     auto data = generateTestData(items, inputSize, outputSize);
+
     Matrix &input = data.input;
     Matrix &expected = data.output;
 
-/*
+    Matrix output = neuralNet.predict(input);
+
     // clang-format off
     Matrix grad = gradient(&input, [&]()
     {
@@ -73,12 +74,10 @@ int main()
     });
     // clang-format on
 
-    Matrix output = neuralNet.predict(input);
-
     neuralNet.fit(input, expected);
 
     std::cout << "\n\nApproximated  grad:\n"
               << grad << std::endl;
-*/
+
     return 0;
 }

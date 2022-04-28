@@ -7,15 +7,6 @@
 
 namespace cave
 {
-    Matrix incrementElement(const Matrix &m, int row, int col, double increment)
-    {
-        Matrix copy = m;
-
-        double value = copy.get(row, col);
-        copy.set(row, col, value + increment);
-
-        return copy;
-    }
 
     Matrix gradient(Matrix *input, std::function<Matrix()> func)
     {
@@ -35,10 +26,10 @@ namespace cave
 
                 Matrix output2 = func();
 
-                double rate = (output2.get(col) - output1.get(col))/inc;
+                double rate = (output2.get(col) - output1.get(col)) / inc;
                 result.set(row, col, rate);
 
-                if(abs(rate) > 2E5)
+                if (abs(rate) > 2E5)
                 {
                     std::cout << "output1: " << output1.get(row, col) << std::endl;
                     std::cout << "output2: " << output2.get(row, col) << std::endl;
@@ -46,7 +37,8 @@ namespace cave
                     std::cout << "diff: " << output2.get(row, col) - output1.get(row, col) << std::endl;
                     std::cout << "inc: " << inc << std::endl;
                     std::cout << "rate: " << rate << std::endl;
-                    std::cout << "\n" << std::endl;
+                    std::cout << "\n"
+                              << std::endl;
                 }
 
                 input->set(row, col, value);
@@ -75,7 +67,11 @@ namespace cave
 
     Matrix square(Matrix input)
     {
-        return input.modify([](int row, int col, int index, double value){ return value*value; });
+        Matrix result(input.rows(), input.cols());
+
+        input.forEach([&](int row, int col, int index, double value)
+                      { result.set(index, value * value); });
+        return result;
     }
 
     Matrix crossEntropy(Matrix &actual, Matrix &expected)
@@ -102,9 +98,10 @@ namespace cave
 
         std::uniform_int_distribution<int> uniform(1, outputSize);
         std::normal_distribution<double> normal(0, 1);
-
+      
         Matrix input(inputSize, items);
         Matrix output(outputSize, items);
+
         for (int col = 0; col < items; col++)
         {
             int radius = uniform(generator);
@@ -130,11 +127,7 @@ namespace cave
             }
         }
 
-        IO io;
-        io.input = std::move(input);
-        io.output = std::move(output);
-
-        return io;
+        return IO(std::move(input), std::move(output));
     }
 
     Matrix relu(Matrix &input)

@@ -12,7 +12,24 @@ namespace cave
 {
     struct BatchResult
     {
-        std::vector<Matrix> weightInputs;
+        BatchResult() {}
+        BatchResult(BatchResult &&other)
+        {
+            weightInputs = std::move(other.weightInputs);
+            io = std::move(other.io);
+            errors = std::move(other.errors);
+        }
+
+        BatchResult &operator=(BatchResult &&other)
+        {
+            weightInputs = std::move(other.weightInputs);
+            io = std::move(other.io);
+            errors = std::move(other.errors);
+
+            return *this;
+        }
+
+        std::vector<int> weightInputs;
         std::vector<Matrix> io;
         std::deque<Matrix> errors;
     };
@@ -39,9 +56,9 @@ namespace cave
         double scaleInitialWeights_ = 1.0;
 
     private: 
-        BatchResult runForwards(Matrix input);
-        BatchResult runBackwards(BatchResult batchResult, Matrix expected);
-        void adjust(BatchResult batchResult);
+        BatchResult runForwards(Matrix &input);
+        void runBackwards(BatchResult &batchResult, Matrix &expected);
+        void adjust(BatchResult &batchResult);
         Matrix loss(BatchResult &result, Matrix &expected);
 
     public:
