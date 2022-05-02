@@ -4,7 +4,9 @@
 #include <iostream>
 #include <exception>
 #include <mutex>
+#include <iomanip>
 
+#include "blockingqueue.h"
 #include "matrixfunctions.h"
 
 namespace cave
@@ -38,6 +40,8 @@ namespace cave
     {
         if (transform == DENSE)
         {
+            weightIndices_.push_back(transforms_.size());
+
             std::default_random_engine generator;
             std::random_device rd;
             generator.seed(rd());
@@ -92,14 +96,32 @@ namespace cave
             assert(input.size() == weights_[0].cols());
         }
 
-        Matrix mInput(input.size(), 1, input);
+        Matrix mInput(input.size(), 1, input, false);
         BatchResult result = runForwards(mInput);
 
         return result.io.back().get();
     }
 
-    void NeuralNet::fit(Loader &trainingLoader)
+    void NeuralNet::runEpoch(Loader &loader, bool trainingMode)
     {
+        MetaData metaData = loader.getMetaData();
+
+        for (int i = 0; i < metaData.numberBatches; ++i)
+        {
+            BatchData batchData = loader.getBatch();
+            Matrix input(metaData.inputSize, batchData.batchItemsRead, batchData.input, false);
+            Matrix expected(metaData.outputSize, batchData.batchItemsRead, batchData.expected, false);
+
+            BatchResult result = runForwards(input);
+        }
+
+
+    }
+
+    void NeuralNet::fit(Loader &trainingLoader, Loader &evaluationLoader)
+    {
+        learningRate_ = initialLearningRate_;
+
         MetaData metaData = trainingLoader.open();
 
         if (weights_.size() > 0)
@@ -107,21 +129,27 @@ namespace cave
             assert(metaData.inputSize == weights_[0].cols());
         }
 
-        for (int i = 0; i < metaData.numberBatches; ++i)
+        for(int epoch = 0; epoch < epochs_; ++epoch)
         {
-            BatchData batchData = trainingLoader.getBatch();
-            Matrix input(metaData.inputSize, batchData.batchItemsRead, batchData.input);
-            Matrix expected(metaData.outputSize, batchData.batchItemsRead, batchData.expected);
+            std::cout << "Epoch " << std::setw(3) << std::fixed << std::setprecision(2) << (epoch + 1) << std::flush;
 
-            BatchResult result = runForwards(input);
+            runEpoch(trainingLoader, true);
+            runEpoch(evaluationLoader, false);
+
+            std::cout << std::endl;
+
+		    learningRate_ -= (initialLearningRate_ - finalLearningRate_) / epochs_;
         }
     }
 
     void NeuralNet::fit(Matrix &input, Matrix &expected)
     {
+
         BatchResult batchResult = runForwards(input);
         runBackwards(batchResult, expected);
-        adjust(batchResult);
+        adjust(batchResult, 0.01);
+
+        std::cout << crossEntropy(batchResult.io.back(), expected).rowMeans() << std::endl;
     }
 
     BatchResult NeuralNet::runForwards(Matrix &input)
@@ -142,8 +170,6 @@ namespace cave
             {
             case DENSE:
             {
-                result.weightInputs.push_back(ioIndex);
-
                 Matrix &weight = weights_[weightIndex];
                 Matrix &bias = biases_[weightIndex];
 
@@ -173,7 +199,6 @@ namespace cave
 
     void NeuralNet::runBackwards(BatchResult &batchResult, Matrix &expected)
     {
-        std::cout << "run backwards" << std::endl;
         auto &io = batchResult.io;
 
         Matrix &output = io.back();
@@ -202,7 +227,7 @@ namespace cave
 
                 if (weightIt == weights_.rend())
                 {
-                    // break;
+                    return;
                 }
 
                 error = weight.transpose() * batchResult.errors.front();
@@ -232,30 +257,31 @@ namespace cave
         }
     }
 
-    void NeuralNet::adjust(BatchResult &batchResult)
+    void NeuralNet::adjust(BatchResult &batchResult, double learningRate)
     {
-        std::lock_guard guard(mtxWeights_);
-
-        std::cout << "errors size: " << batchResult.errors.size() << std::endl;
-        std::cout << "io size: " << batchResult.io.size() << std::endl;
+        std::lock_guard lock(mtxWeights_);
 
         for (int i = 0; i < weights_.size(); ++i)
         {
+            int weightIndex = weightIndices_[i];
+
             Matrix &weight = weights_[i];
             Matrix &bias = biases_[i];
-            Matrix &error = batchResult.errors[i];
-            Matrix &input = batchResult.io[i];
+            Matrix &error = batchResult.errors[weightIndex];
+            Matrix &input = batchResult.io[weightIndex];
 
-            std::cout << "\n\n"
-                      << i << std::endl;
-            std::cout << "WEIGHT: " << weight.rows() << "x" << weight.cols() << std::endl;
-            std::cout << "BIAS: " << bias.rows() << "x" << bias.cols() << std::endl;
-            std::cout << "ERROR: " << error.rows() << "x" << error.cols() << std::endl;
-            std::cout << "INPUT: " << input.rows() << "x" << input.cols() << std::endl;
+            Matrix biasAdjust = learningRate * bias.rowMeans();
+            Matrix weightAdjust = double(learningRate) / input.cols() * (error * input.transpose());
+
+            bias.modify([&](int row, int col, int index, double value)
+                        { return value - biasAdjust.get(row); });
+
+            weight.modify([&](int row, int col, int index, double value)
+                          { return value - weightAdjust.get(index); });
         }
 
-        std::cout << "error\n"
-                  << batchResult.errors.front() << std::endl;
+        // std::cout << "error\n"
+        //           << batchResult.errors.front() << std::endl;
     }
 
     NeuralNet::NeuralNet(std::vector<int> layerSizes)

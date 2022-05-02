@@ -48,7 +48,7 @@ namespace cave
             v_.resize(rows * cols);
         }
 
-        Matrix(int rows, int cols, std::vector<double> values);
+        Matrix(int rows, int cols, std::vector<double> values, bool rowOrder=true);
 
         Matrix(int rows, int cols, std::function<double()> init) : rows_(rows), cols_(cols)
         {
@@ -68,6 +68,7 @@ namespace cave
 
         Matrix transpose() const;
         Matrix sumColumns();
+        Matrix rowMeans();
 
         int rows()
         {

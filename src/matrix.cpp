@@ -7,13 +7,21 @@
 
 namespace cave
 {
-    Matrix::Matrix(int rows, int cols, std::vector<double> values)
+    Matrix::Matrix(int rows, int cols, std::vector<double> values, bool rowOrder)
     {
-        Matrix m(cols, rows);
-        m.v_ = values;
-        Matrix transposed = m.transpose();
+        if (rowOrder)
+        {
+            v_ = std::move(values);
+        }
+        else
+        {
+            Matrix m(cols, rows);
+            m.v_ = values;
+            Matrix transposed = m.transpose();
 
-        v_ = std::move(transposed.v_);
+            v_ = std::move(transposed.v_);
+        }
+
         rows_ = rows;
         cols_ = cols;
     }
@@ -22,12 +30,12 @@ namespace cave
     {
         const double tolerance = 0.0001;
 
-        for(int i = 0; i < v_.size(); ++i)
+        for (int i = 0; i < v_.size(); ++i)
         {
             double value1 = v_[i];
             double value2 = other.v_[i];
 
-            if(abs(value2 - value1) > tolerance)
+            if (abs(value2 - value1) > tolerance)
             {
                 return false;
             }
@@ -50,6 +58,16 @@ namespace cave
     double Matrix::get(int row, int col)
     {
         return v_[row * cols_ + col];
+    }
+
+    Matrix Matrix::rowMeans()
+    {
+        Matrix result(rows_, 1);
+
+        forEach([&](int row, int col, int index, double value)
+                { result.v_[row] += value / cols_; });
+
+        return result;
     }
 
     Matrix Matrix::sumColumns()
@@ -86,7 +104,7 @@ namespace cave
 
     Matrix operator*(const Matrix &m1, const Matrix &m2)
     {
-        if(m1.cols_ != m2.rows_)
+        if (m1.cols_ != m2.rows_)
         {
             std::stringstream ss;
             ss << "Matrixes cannot be multiplied: ";
@@ -145,17 +163,17 @@ namespace cave
         return *this;
     }
 
-     Matrix Matrix::apply(std::function<double(int, int, int, double)> f)
-     {
-         Matrix result;
-         result.v_ = v_;
-         result.rows_ = rows_;
-         result.cols_ = cols_;
+    Matrix Matrix::apply(std::function<double(int, int, int, double)> f)
+    {
+        Matrix result;
+        result.v_ = v_;
+        result.rows_ = rows_;
+        result.cols_ = cols_;
 
-         result.modify(f);
+        result.modify(f);
 
-         return result;
-     }
+        return result;
+    }
 
     std::string Matrix::str() const
     {
