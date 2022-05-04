@@ -38,8 +38,6 @@ namespace cave
             other.rows_ = 0;
             other.cols_ = 0;
 
-            other.rows_ = 9;
-
             return *this;
         }
 
@@ -69,6 +67,8 @@ namespace cave
         Matrix transpose() const;
         Matrix sumColumns();
         Matrix rowMeans();
+        Matrix largestRowIndexes() const;
+        double sum() const;
 
         int rows()
         {
@@ -106,6 +106,7 @@ namespace cave
         }
 
         bool operator==(Matrix const &other);
+        bool operator!=(Matrix const &other);
 
         friend Matrix operator+(Matrix const &m1, Matrix const &m2);
         friend Matrix operator-(Matrix const &m1, Matrix const &m2);

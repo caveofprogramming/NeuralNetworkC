@@ -26,9 +26,14 @@ namespace cave
         cols_ = cols;
     }
 
+    bool Matrix::operator!=(Matrix const &other)
+    {
+        return !(*this == other);
+    }
+
     bool Matrix::operator==(Matrix const &other)
     {
-        const double tolerance = 0.0001;
+        const double tolerance = 0.01;
 
         for (int i = 0; i < v_.size(); ++i)
         {
@@ -178,24 +183,72 @@ namespace cave
     std::string Matrix::str() const
     {
         std::stringstream ss;
+        const int maxRows = 8;
+        const int maxCols = 8;
+
+        if(rows_ >= maxRows || cols_ >= maxCols)
+        {
+            ss << "\n[truncated from " << rows_ << "x" << cols_ << "]";
+        }
 
         ss << std::fixed;
         ss << std::showpos;
 
+        // clang-format off
         forEach([&](double row, double col, double value)
-                {
+        {
+            if(col >= maxCols || row >= maxRows)
+            {
+                return;
+            }
 
             if(col == 0)
             {
                 ss << "\n";
             }
-
+           
             ss << std::setprecision(6);
             ss << std::setw(12);
             ss << value;
-            ss << "  "; });
+            ss << "  "; 
+        });
+        // clang-format on
+
+        ss << "\n\n\n";
 
         return ss.str();
+    }
+
+    double Matrix::sum() const
+    {
+        double total = 0;
+
+        for (auto &v : v_)
+        {
+            total += v;
+        }
+
+        return total;
+    }
+
+    Matrix Matrix::largestRowIndexes() const
+    {
+        Matrix result(1, cols_);
+
+        std::vector<double> largest(cols_);
+
+        // clang-format off
+        forEach([&](int row, int col, int index, double value)
+        { 
+            if(value > largest[col])
+            {
+                largest[col] = value;
+                result.v_[col] = row;
+            }
+        });
+        // clang-format on
+
+        return result;
     }
 
     void Matrix::forEach(std::function<void(int, int, double)> f) const

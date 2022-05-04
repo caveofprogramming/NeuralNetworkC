@@ -7,6 +7,23 @@
 
 namespace cave
 {
+    double numberCorrect(const Matrix &actual, Matrix &expected)
+    {
+        Matrix actualLargest = actual.largestRowIndexes();
+        Matrix expectedLargest = expected.largestRowIndexes();
+
+        int correct = 0;
+
+        for(int i = 0; i < actualLargest.cols(); ++i)
+        {
+            if(std::abs(actualLargest.get(i) - expectedLargest.get(i)) < 0.1)
+            {
+                ++correct;
+            }
+        }
+
+        return correct;
+    }
 
     Matrix gradient(Matrix *input, std::function<Matrix()> func)
     {

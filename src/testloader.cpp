@@ -49,5 +49,6 @@ namespace cave
 
     void TestLoader::close()
     {
+        totalItemsRead_ = 0;
     }
 }

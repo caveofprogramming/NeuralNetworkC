@@ -8,8 +8,11 @@
 #include "matrix.h"
 #include "loader.h"
 
+
 namespace cave
 {
+    class NeuralNetTest;
+    
     struct BatchResult
     {
         BatchResult() {}
@@ -56,12 +59,13 @@ namespace cave
         double initialLearningRate_{0.01};
         double finalLearningRate_{0.001};
         double learningRate_{0.01};
+        bool errorAtInput_{false};
 
         int epochs_ = 20;
 
     private: 
         BatchResult runForwards(Matrix &input);
-        void runBackwards(BatchResult &batchResult, Matrix &expected);
+        void runBackwards(BatchResult &batchResult, Matrix &expected, bool bInputError = false);
         void adjust(BatchResult &batchResult, double learningRate);
         Matrix loss(BatchResult &result, Matrix &expected);
         void runEpoch(Loader &loader, bool trainingMode);
@@ -70,9 +74,10 @@ namespace cave
         NeuralNet(){};
         NeuralNet(std::vector<int> layerSizes);
 
+        static bool selfTest(Loader &loader);
         void add(NeuralNet::Transform transform, int rows = 0, int cols = 0);
         void setScaleInitialWeights(double scale) { scaleInitialWeights_ = scale; };
-        void fit(Matrix &input, Matrix &expected);
+        void setLearningRates(double initial, double final){ initialLearningRate_ = initial; finalLearningRate_ = final; };
         void fit(Loader &trainingLoader, Loader &evaluationLoader);
         Matrix predict(Matrix &input);
         void setEpochs(int epochs) { epochs_ = epochs; }
@@ -81,5 +86,7 @@ namespace cave
         Matrix &getBias(int i) { return biases_[i]; };
 
         friend std::ostream &operator<<(std::ostream &out, NeuralNet &neuralNet);
+
+        friend class cave::NeuralNetTest;
     };
 }
