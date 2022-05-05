@@ -14,7 +14,7 @@ namespace cave
         int outputSize_{3};
         int batchSize_{32};
 
-        TestLoader getTestLoader();
+        TestLoader getTestLoader(int items);
         void configureNeuralNet();
     public:
         NeuralNetTest()

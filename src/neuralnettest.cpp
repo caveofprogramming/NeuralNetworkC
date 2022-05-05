@@ -6,9 +6,9 @@
 namespace cave
 {
 
-    TestLoader NeuralNetTest::getTestLoader()
+    TestLoader NeuralNetTest::getTestLoader(int items)
     {
-        return TestLoader(60000, inputSize_, outputSize_, batchSize_);
+        return TestLoader(items, inputSize_, outputSize_, batchSize_);
     }
 
     void NeuralNetTest::configureNeuralNet()
@@ -50,12 +50,16 @@ namespace cave
 
     bool NeuralNetTest::testAdjust()
     {
+        TestLoader testLoader = getTestLoader(60000);
+        TestLoader evalLoader = getTestLoader(10000);
+
+        neuralNet_.fit(testLoader, evalLoader);
         return true;
     }
 
     bool NeuralNetTest::testBackprop()
     {
-        TestLoader loader = getTestLoader();
+        TestLoader loader = getTestLoader(1000);
 
         MetaData metaData = loader.open();
 

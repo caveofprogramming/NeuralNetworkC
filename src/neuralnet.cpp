@@ -46,7 +46,7 @@ namespace cave
             std::default_random_engine generator;
             std::random_device rd;
             generator.seed(rd());
-            std::normal_distribution<double> normal(-1, 1);
+            std::normal_distribution<double> normal(0, 1);
 
             if (cols == 0)
             {
@@ -103,8 +103,6 @@ namespace cave
         return result.io.back().get();
     }
 
-   
-
     void NeuralNet::runEpoch(Loader &loader, bool trainingMode)
     {
         MetaData metaData = loader.open();
@@ -131,7 +129,7 @@ namespace cave
             {
                 // std::cout << "\nLoss1: " << crossEntropy(result.io.back(), expected).rowMeans().get(0) << std::endl;
                 runBackwards(result, expected);
-                adjust(result, 0.01);
+                adjust(result, learningRate_);
 
                 if (i % printDot == 0)
                 {
@@ -299,21 +297,18 @@ namespace cave
             Matrix &error = batchResult.errors[weightIndex + 1];
             Matrix &input = batchResult.io[weightIndex];
 
-            std::cout << error.rowMeans() << std::endl;
-            std::cout << learningRate * error.rowMeans() << std::endl;
             Matrix biasAdjust = learningRate * error.rowMeans();
             Matrix weightAdjust = (double(learningRate) / input.cols()) * (error * input.transpose());
-
-            // std::cout << "input: " << input.rows() << " x " << input.cols() << ", " << input.sum() << std::endl;
-            // std::cout << "weightAdjust: " << weightAdjust.rows() << " x " << weightAdjust.cols() << ", " << weightAdjust.sum() << std::endl;
-            Matrix &test = error;
-            // std::cout << "test: " << test.rows() << " x " << test.cols() << ", " << test.sum() << std::endl;
 
             bias.modify([&](int row, int col, int index, double value)
                         { return value - biasAdjust.get(row); });
 
+            //std::cout << std::setprecision(6) << "weight sum1: " << weight.sum() << std::endl;
+
             weight.modify([&](int row, int col, int index, double value)
                           { return value - weightAdjust.get(index); });
+
+            //std::cout << std::setprecision(6) << "weight sum2: " << weight.sum() << std::endl;
         }
 
         // std::cout << "error\n"
