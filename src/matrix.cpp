@@ -35,7 +35,7 @@ namespace cave
     {
         const double tolerance = 0.01;
 
-        for (int i = 0; i < v_.size(); ++i)
+        for (std::size_t i = 0; i < v_.size(); ++i)
         {
             double value1 = v_[i];
             double value2 = other.v_[i];
@@ -75,7 +75,17 @@ namespace cave
         return result;
     }
 
-    Matrix Matrix::sumColumns()
+    Matrix Matrix::rowSums()
+    {
+        Matrix result(rows_, 1);
+
+        forEach([&](int row, int col, int index, double value)
+                { result.v_[row] += value; });
+
+        return result;
+    }
+
+    Matrix Matrix::colSums()
     {
         Matrix result(1, cols_);
 
@@ -89,7 +99,7 @@ namespace cave
     {
         Matrix result(m.rows_, m.cols_);
 
-        for (int i = 0; i < m.v_.size(); ++i)
+        for (std::size_t i = 0; i < m.v_.size(); ++i)
         {
             result.v_[i] = m.v_[i] * a;
         }

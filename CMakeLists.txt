@@ -5,9 +5,9 @@ project("Neural Network"    VERSION 1.0
                             LANGUAGES CXX)
 
 set(CMAKE_BUILD_TYPE Debug)
+#set(CMAKE_CXX_FLAGS "-Wall -Wextra")
 
 IF(CMAKE_BUILD_TYPE STREQUAL "Release")
-    set(CMAKE_CXX_FLAGS "-Wall -Wextra")
     set(CMAKE_CXX_FLAGS_RELEASE "-O3")   
 ENDIF()
 

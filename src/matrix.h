@@ -65,8 +65,9 @@ namespace cave
         }
 
         Matrix transpose() const;
-        Matrix sumColumns();
+        Matrix colSums();
         Matrix rowMeans();
+        Matrix rowSums();
         Matrix largestRowIndexes() const;
         double sum() const;
 

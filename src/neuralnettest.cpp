@@ -30,9 +30,10 @@ namespace cave
         bool backpropPassed = testBackprop();
         std::cout << (backpropPassed ? "passed" : "failed") << std::endl;
 
-        std::cout << "Testing adjust ... " << std::flush;
+        std::cout << "Testing adjust ... " << std::endl;
+        neuralNet_.setEpochs(1);
         bool adjustPassed = testAdjust();
-        std::cout << (adjustPassed ? "passed" : "failed") << std::endl;
+        std::cout << "\n" << (adjustPassed ? "passed" : "failed") << std::endl;
 
         bool passed = backpropPassed && adjustPassed;
 
@@ -54,7 +55,22 @@ namespace cave
         TestLoader evalLoader = getTestLoader(10000);
 
         neuralNet_.fit(testLoader, evalLoader);
-        return true;
+
+        BatchData data = testLoader.getBatch();
+
+        Matrix input(inputSize_, data.batchItemsRead);
+        Matrix expected(outputSize_, data.batchItemsRead);
+
+        Matrix result = neuralNet_.predict(input);
+
+        int correct = numberCorrect(expected, input);
+
+        if(double(correct)/data.batchItemsRead > 0.96)
+        {
+            return true;
+        }
+
+        return false;
     }
 
     bool NeuralNetTest::testBackprop()
@@ -68,18 +84,25 @@ namespace cave
         Matrix expected(metaData.outputSize, batchData.batchItemsRead, batchData.expected, false);
         Matrix inputCopy = input.clone();
 
-        BatchResult result = neuralNet_.runForwards(inputCopy);
+        BatchResult result;
+        
+        neuralNet_.runForwards(result, inputCopy);
         neuralNet_.runBackwards(result, expected, true);
 
         Matrix &inputError = result.errors.front();
 
+        // clang-format off
         Matrix approximatedError = gradient(&input, [&]()
-                                            {
-
+        {
             Matrix inputCopy = input.clone();
-            BatchResult batchResult = neuralNet_.runForwards(inputCopy);
 
-            return crossEntropy(batchResult.io.back(), expected); });
+            BatchResult result;
+            
+            neuralNet_.runForwards(result, inputCopy);
+
+            return crossEntropy(result.io.back(), expected); 
+        });
+        // clang-format on
 
         if (inputError != approximatedError)
         {

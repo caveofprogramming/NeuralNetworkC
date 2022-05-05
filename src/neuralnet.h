@@ -12,14 +12,19 @@
 namespace cave
 {
     class NeuralNetTest;
-    
+
     struct BatchResult
     {
         BatchResult() {}
+
         BatchResult(BatchResult &&other)
         {
             io = std::move(other.io);
             errors = std::move(other.errors);
+
+            numberItems = other.numberItems;
+            numberCorrect = other.numberCorrect;
+            totalLoss = other.totalLoss;
         }
 
         BatchResult &operator=(BatchResult &&other)
@@ -27,12 +32,19 @@ namespace cave
             io = std::move(other.io);
             errors = std::move(other.errors);
 
+            numberItems = other.numberItems;
+            numberCorrect = other.numberCorrect;
+            totalLoss = other.totalLoss;
+
             return *this;
         }
 
-        std::deque<int> weightErrors;
         std::vector<Matrix> io;
         std::deque<Matrix> errors;
+
+        int numberItems{0};
+        int numberCorrect{0};
+        double totalLoss{0};
     };
 
     class NeuralNet
@@ -64,11 +76,12 @@ namespace cave
         int epochs_ = 20;
 
     private: 
-        BatchResult runForwards(Matrix &input);
+        void runForwards(BatchResult &batchResult, Matrix &input);
         void runBackwards(BatchResult &batchResult, Matrix &expected, bool bInputError = false);
         void adjust(BatchResult &batchResult, double learningRate);
         Matrix loss(BatchResult &result, Matrix &expected);
         void runEpoch(Loader &loader, bool trainingMode);
+        BatchResult runBatch(Loader &loader, bool trainingMode);
 
     public:
         NeuralNet(){};

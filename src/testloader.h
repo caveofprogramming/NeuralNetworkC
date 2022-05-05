@@ -1,5 +1,6 @@
 #pragma once
 
+#include <mutex>
 #include "loader.h"
 
 namespace cave
@@ -9,6 +10,7 @@ namespace cave
     private:
         MetaData metaData_;
         int totalItemsRead_{0};
+        std::mutex mtxRead_;
 
     public:
         TestLoader(int items, int inputSize, int outputSize, int batchSize);

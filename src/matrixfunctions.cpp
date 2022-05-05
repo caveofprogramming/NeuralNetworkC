@@ -160,7 +160,7 @@ namespace cave
         input.forEach([&](int row, int col, int index, double value)
                       { result[index] = exp(value); });
 
-        Matrix sum = result.sumColumns();
+        Matrix sum = result.colSums();
 
         result.modify([&](int row, int col, int index, double value)
                       { return value / sum[col]; });
