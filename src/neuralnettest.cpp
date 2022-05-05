@@ -20,6 +20,7 @@ namespace cave
         neuralNet_.add(NeuralNet::DENSE, outputSize_);
         neuralNet_.add(NeuralNet::SOFTMAX);
         neuralNet_.setEpochs(20);
+        neuralNet_.setThreads(4);
         neuralNet_.setLearningRates(0.02, 0.001);
     }
 

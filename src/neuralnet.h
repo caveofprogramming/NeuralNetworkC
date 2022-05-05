@@ -67,13 +67,14 @@ namespace cave
 
         std::vector<Transform> transforms_;
 
-        double scaleInitialWeights_{1.0};
+        double scaleInitialWeights_{0.2};
         double initialLearningRate_{0.01};
         double finalLearningRate_{0.001};
         double learningRate_{0.01};
         bool errorAtInput_{false};
 
-        int epochs_ = 20;
+        int epochs_{20};
+        int threads_{4};
 
     private: 
         void runForwards(BatchResult &batchResult, Matrix &input);
@@ -97,6 +98,7 @@ namespace cave
         std::vector<double> predict(std::vector<double> input);
         Matrix &getWeight(int i) { return weights_[i]; };
         Matrix &getBias(int i) { return biases_[i]; };
+        void setThreads(int threads){ threads_ = threads;}
 
         friend std::ostream &operator<<(std::ostream &out, NeuralNet &neuralNet);
 

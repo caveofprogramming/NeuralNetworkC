@@ -4,7 +4,8 @@ project("Neural Network"    VERSION 1.0
                             DESCRIPTION "Neural network in C++"
                             LANGUAGES CXX)
 
-set(CMAKE_BUILD_TYPE Debug)
+#set(CMAKE_BUILD_TYPE Debug)
+set(CMAKE_BUILD_TYPE Release)
 #set(CMAKE_CXX_FLAGS "-Wall -Wextra")
 
 IF(CMAKE_BUILD_TYPE STREQUAL "Release")

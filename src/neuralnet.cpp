@@ -6,6 +6,7 @@
 #include <mutex>
 #include <cmath>
 #include <iomanip>
+#include <chrono>
 
 #include "blockingqueue.h"
 #include "matrixfunctions.h"
@@ -146,7 +147,7 @@ namespace cave
 
         int printDot = std::ceil(double(metaData.numberBatches) / 30);
 
-        cave::ThreadPool<BatchResult> threadPool(12);
+        cave::ThreadPool<BatchResult> threadPool(threads_);
 
         for (int i = 0; i < metaData.numberBatches; ++i)
         {
@@ -174,7 +175,8 @@ namespace cave
         {
             double averageLoss = totalLoss / totalItems;
 
-            std::cout << " Loss: " << averageLoss << " -- percent correct: " << (100.0 * totalCorrect) / totalItems << std::endl;
+            std::cout << " Loss: " << averageLoss << " -- percent correct: "
+                      << ((100.0 * totalCorrect) / totalItems) << "%: ";
         }
 
         loader.close();
@@ -195,8 +197,17 @@ namespace cave
         {
             std::cout << "Epoch " << std::setw(3) << std::fixed << std::setprecision(2) << (epoch + 1) << " " << std::flush;
 
+            auto start = std::chrono::high_resolution_clock::now();
+
             runEpoch(trainingLoader, true);
             runEpoch(evaluationLoader, false);
+
+            auto finish = std::chrono::high_resolution_clock::now();
+            auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(finish - start);
+
+            std::cout << std::setprecision(1)
+            << duration.count()/1000.0 << "s" << std::endl;
+
             learningRate_ -= (initialLearningRate_ - finalLearningRate_) / epochs_;
         }
     }
