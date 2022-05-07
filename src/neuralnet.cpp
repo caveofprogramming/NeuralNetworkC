@@ -114,8 +114,8 @@ namespace cave
 
         MetaData &metaData = loader.getMetaData();
         BatchData batchData = loader.getBatch();
-        Matrix input(metaData.inputSize, batchData.batchItemsRead, batchData.input, false);
-        Matrix expected(metaData.outputSize, batchData.batchItemsRead, batchData.expected, false);
+        Matrix input(metaData.inputSize, batchData.numberRead, batchData.input, false);
+        Matrix expected(metaData.outputSize, batchData.numberRead, batchData.expected, false);
 
         batchResult.numberItems = input.cols();
 
@@ -190,7 +190,15 @@ namespace cave
 
         if (weights_.size() > 0)
         {
-            assert(metaData.inputSize == weights_[0].cols());
+            if(metaData.inputSize != weights_[0].cols())
+            {
+                std::stringstream ss;
+
+                ss << "Input size from loader is " << metaData.inputSize;
+                ss << " but first dense layer has " << weights_[0].cols();
+                ss << " columns; mismatch.";
+                throw std::logic_error(ss.str());
+            }
         }
 
         for (int epoch = 0; epoch < epochs_; ++epoch)

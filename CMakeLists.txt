@@ -21,6 +21,8 @@ set(SRC_FILES   ${SOURCE_DIR}/main.cpp
                 ${SOURCE_DIR}/testloader.cpp
                 ${SOURCE_DIR}/neuralnet.cpp
                 ${SOURCE_DIR}/neuralnettest.cpp
+                ${SOURCE_DIR}/mnistloader.cpp
+                ${SOURCE_DIR}/imagewriter.cpp
                 )
 
 

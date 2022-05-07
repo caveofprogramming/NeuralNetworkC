@@ -59,14 +59,14 @@ namespace cave
 
         BatchData data = testLoader.getBatch();
 
-        Matrix input(inputSize_, data.batchItemsRead);
-        Matrix expected(outputSize_, data.batchItemsRead);
+        Matrix input(inputSize_, data.numberRead);
+        Matrix expected(outputSize_, data.numberRead);
 
         Matrix result = neuralNet_.predict(input);
 
         int correct = numberCorrect(expected, input);
 
-        if(double(correct)/data.batchItemsRead > 0.96)
+        if(double(correct)/data.numberRead > 0.96)
         {
             return true;
         }
@@ -81,8 +81,8 @@ namespace cave
         MetaData metaData = loader.open();
 
         BatchData batchData = loader.getBatch();
-        Matrix input(metaData.inputSize, batchData.batchItemsRead, batchData.input, false);
-        Matrix expected(metaData.outputSize, batchData.batchItemsRead, batchData.expected, false);
+        Matrix input(metaData.inputSize, batchData.numberRead, batchData.input, false);
+        Matrix expected(metaData.outputSize, batchData.numberRead, batchData.expected, false);
         Matrix inputCopy = input.clone();
 
         BatchResult result;

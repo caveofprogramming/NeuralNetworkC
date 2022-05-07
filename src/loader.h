@@ -15,8 +15,7 @@ namespace cave
 
     struct BatchData
     {
-        int batchItemsRead;
-        int totalItemsRead;
+        int numberRead;
         std::vector<double> input;
         std::vector<double> expected;
     };

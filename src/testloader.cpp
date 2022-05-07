@@ -28,7 +28,7 @@ namespace cave
     BatchData TestLoader::getBatch()
     {
         std::lock_guard<std::mutex> guard(mtxRead_);
-        
+
         int itemsRead = std::min(metaData_.items - totalItemsRead_, metaData_.batchSize);
         
         auto testData = generateTestData(itemsRead, metaData_.inputSize, metaData_.outputSize);
@@ -43,8 +43,7 @@ namespace cave
 
         totalItemsRead_ += itemsRead;
 
-        batchData.batchItemsRead = itemsRead;
-        batchData.totalItemsRead = totalItemsRead_;
+        batchData.numberRead = itemsRead;
         
         return batchData;
     }
