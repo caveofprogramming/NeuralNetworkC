@@ -34,15 +34,16 @@ namespace cave
         std::cout << "Testing adjust ... " << std::endl;
         neuralNet_.setEpochs(1);
         bool adjustPassed = testAdjust();
-        std::cout << "\n" << (adjustPassed ? "passed" : "failed") << std::endl;
+        std::cout << "\n"
+                  << (adjustPassed ? "passed" : "failed") << std::endl;
 
         bool passed = backpropPassed && adjustPassed;
 
-        if(passed)
+        if (passed)
         {
             std::cout << "All tests passed." << std::endl;
         }
-        else 
+        else
         {
             std::cerr << "Some tests failed." << std::endl;
         }
@@ -52,21 +53,19 @@ namespace cave
 
     bool NeuralNetTest::testAdjust()
     {
-        TestLoader testLoader = getTestLoader(60000);
+        TestLoader trainingLoader = getTestLoader(60000);
         TestLoader evalLoader = getTestLoader(10000);
 
-        neuralNet_.fit(testLoader, evalLoader);
+        TrainingData trainingData = trainingLoader.load();
+        TrainingData evalData = evalLoader.load();
 
-        BatchData data = testLoader.getBatch();
+        neuralNet_.fit(trainingData.input, trainingData.expected);
 
-        Matrix input(inputSize_, data.numberRead);
-        Matrix expected(outputSize_, data.numberRead);
+        Matrix result = neuralNet_.predict(evalData.input[0]);
 
-        Matrix result = neuralNet_.predict(input);
+        int correct = numberCorrect(result, evalData.expected[0]);
 
-        int correct = numberCorrect(expected, input);
-
-        if(double(correct)/data.numberRead > 0.96)
+        if (double(correct) / result.cols() > 0.96)
         {
             return true;
         }
@@ -78,28 +77,23 @@ namespace cave
     {
         TestLoader loader = getTestLoader(1000);
 
-        MetaData metaData = loader.open();
+        TrainingData data = loader.load();
 
-        BatchData batchData = loader.getBatch();
-        Matrix input(metaData.inputSize, batchData.numberRead, batchData.input, false);
-        Matrix expected(metaData.outputSize, batchData.numberRead, batchData.expected, false);
-        Matrix inputCopy = input.clone();
-
+        Matrix &input = data.input[0];
+        Matrix &expected = data.expected[0];
         BatchResult result;
-        
-        neuralNet_.runForwards(result, inputCopy);
-        neuralNet_.runBackwards(result, expected, true);
+
+        neuralNet_.runForwards(result, input);
+        neuralNet_.runBackwards(result, data.expected[0]);
 
         Matrix &inputError = result.errors.front();
 
         // clang-format off
         Matrix approximatedError = gradient(&input, [&]()
         {
-            Matrix inputCopy = input.clone();
-
             BatchResult result;
             
-            neuralNet_.runForwards(result, inputCopy);
+            neuralNet_.runForwards(result, input);
 
             return crossEntropy(result.io.back(), expected); 
         });
@@ -115,8 +109,6 @@ namespace cave
                       << approximatedError << std::endl;
             return false;
         }
-
-        loader.close();
 
         if (std::abs(inputError.sum()) < 0.0001)
         {

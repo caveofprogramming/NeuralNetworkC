@@ -64,6 +64,14 @@ namespace cave
                    { return init(index); });
         }
 
+        Matrix(int rows, int cols, std::function<double(int, int, int)> init) : rows_(rows), cols_(cols)
+        {
+            v_.resize(rows * cols);
+
+            modify([&](int row, int col, int index, double value)
+                   { return init(row, col, index); });
+        }
+
         Matrix transpose() const;
         Matrix colSums();
         Matrix rowMeans();

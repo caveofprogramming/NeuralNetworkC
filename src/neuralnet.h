@@ -6,8 +6,6 @@
 #include <deque>
 #include <mutex>
 #include "matrix.h"
-#include "loader.h"
-
 
 namespace cave
 {
@@ -78,21 +76,21 @@ namespace cave
 
     private: 
         void runForwards(BatchResult &batchResult, Matrix &input);
-        void runBackwards(BatchResult &batchResult, Matrix &expected, bool bInputError = false);
+        void runBackwards(BatchResult &batchResult, Matrix &expecteds, bool bInputError = false);
         void adjust(BatchResult &batchResult, double learningRate);
-        Matrix loss(BatchResult &result, Matrix &expected);
-        void runEpoch(Loader &loader, bool trainingMode);
-        BatchResult runBatch(Loader &loader, bool trainingMode);
+        Matrix loss(BatchResult &result, Matrix &expecteds);
+        void runEpoch(std::vector<Matrix> &inputs, std::vector<Matrix> &expecteds);
+        BatchResult runBatch(Matrix &input, Matrix &expected);
 
     public:
         NeuralNet(){};
         NeuralNet(std::vector<int> layerSizes);
 
-        static bool selfTest(Loader &loader);
         void add(NeuralNet::Transform transform, int rows = 0, int cols = 0);
         void setScaleInitialWeights(double scale) { scaleInitialWeights_ = scale; };
         void setLearningRates(double initial, double final){ initialLearningRate_ = initial; finalLearningRate_ = final; };
-        void fit(Loader &trainingLoader, Loader &evaluationLoader);
+        void fit(std::vector<Matrix> &inputs, std::vector<Matrix> &expecteds);
+        double evaluate(std::vector<Matrix> &inputs, std::vector<Matrix> &expecteds);
         Matrix predict(Matrix &input);
         void setEpochs(int epochs) { epochs_ = epochs; }
         std::vector<double> predict(std::vector<double> input);

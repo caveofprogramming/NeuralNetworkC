@@ -3,6 +3,7 @@
 #include <random>
 #include <iostream>
 #include <exception>
+#include <assert.h>
 #include <mutex>
 #include <cmath>
 #include <iomanip>
@@ -72,10 +73,13 @@ namespace cave
         transforms_.push_back(transform);
     }
 
-    Matrix NeuralNet::loss(BatchResult &result, Matrix &expected)
+    Matrix NeuralNet::loss(BatchResult &result, Matrix &expecteds)
     {
         Matrix &output = result.io.back();
-        return crossEntropy(output, expected);
+
+        auto losses = crossEntropy(output, expecteds);
+
+        return losses;
     }
 
     Matrix NeuralNet::predict(Matrix &input)
@@ -108,60 +112,47 @@ namespace cave
         return result.io.back().get();
     }
 
-    BatchResult NeuralNet::runBatch(Loader &loader, bool trainingMode)
+    BatchResult NeuralNet::runBatch(Matrix &input, Matrix &expected)
     {
         BatchResult batchResult;
-
-        MetaData &metaData = loader.getMetaData();
-        BatchData batchData = loader.getBatch();
-        Matrix input(metaData.inputSize, batchData.numberRead, batchData.input, false);
-        Matrix expected(metaData.outputSize, batchData.numberRead, batchData.expected, false);
 
         batchResult.numberItems = input.cols();
 
         runForwards(batchResult, input);
 
-        if (trainingMode)
-        {
-            runBackwards(batchResult, expected);
-            adjust(batchResult, learningRate_);
-        }
-        else
-        {
-            batchResult.numberCorrect = numberCorrect(batchResult.io.back(), expected);
-            batchResult.totalLoss = crossEntropy(batchResult.io.back(), expected).rowSums().get(0);
-        }
+        runBackwards(batchResult, expected);
+        adjust(batchResult, learningRate_);
+
+        batchResult.numberCorrect = numberCorrect(batchResult.io.back(), expected);
+        batchResult.totalLoss = crossEntropy(batchResult.io.back(), expected).rowSums().get(0);
 
         return batchResult;
     }
 
-    void NeuralNet::runEpoch(Loader &loader, bool trainingMode)
+    void NeuralNet::runEpoch(std::vector<Matrix> &inputs, std::vector<Matrix> &expecteds)
     {
-        MetaData &metaData = loader.getMetaData();
-
-        // std::cout << metaData.numberBatches <<  std::endl;
-
         double totalLoss = 0;
         int totalCorrect = 0;
         int totalItems = 0;
 
-        int printDot = std::ceil(double(metaData.numberBatches) / 30);
+        int printDot = std::ceil(inputs.size());
 
         cave::ThreadPool<BatchResult> threadPool(threads_);
 
-        for (int i = 0; i < metaData.numberBatches; ++i)
+        for (int i = 0; i < inputs.size(); ++i)
         {
+
             threadPool.submit([&]()
-                              { return runBatch(loader, trainingMode); });
+                              { return runBatch(inputs[i], expecteds[i]); });
         }
 
         threadPool.start();
 
-        for (int i = 0; i < metaData.numberBatches; ++i)
+        for (int i = 0; i < inputs.size(); ++i)
         {
             BatchResult result = threadPool.get();
 
-            if (i % printDot == 0 && trainingMode)
+            if (i % printDot == 0)
             {
                 std::cout << "." << std::flush;
             }
@@ -171,30 +162,30 @@ namespace cave
             totalLoss += result.totalLoss;
         }
 
-        if (!trainingMode)
-        {
-            double averageLoss = totalLoss / totalItems;
+        double averageLoss = totalLoss / totalItems;
 
-            std::cout << " Loss: " << averageLoss << " -- percent correct: "
-                      << ((100.0 * totalCorrect) / totalItems) << "%: ";
-        }
-
-        loader.close();
+        std::cout << " Loss: " << averageLoss << " -- percent correct: "
+                  << ((100.0 * totalCorrect) / totalItems) << "%: ";
     }
 
-    void NeuralNet::fit(Loader &trainingLoader, Loader &evaluationLoader)
+    double NeuralNet::evaluate(std::vector<Matrix> &inputs, std::vector<Matrix> &expecteds)
+    {
+        return 0;
+    }
+
+    void NeuralNet::fit(std::vector<Matrix> &inputs, std::vector<Matrix> &expecteds)
     {
         learningRate_ = initialLearningRate_;
 
-        MetaData metaData = trainingLoader.open();
-
         if (weights_.size() > 0)
         {
-            if(metaData.inputSize != weights_[0].cols())
+            int inputSize = inputs[0].rows();
+
+            if (inputSize != weights_[0].cols())
             {
                 std::stringstream ss;
 
-                ss << "Input size from loader is " << metaData.inputSize;
+                ss << "Input size is " << inputSize;
                 ss << " but first dense layer has " << weights_[0].cols();
                 ss << " columns; mismatch.";
                 throw std::logic_error(ss.str());
@@ -207,14 +198,13 @@ namespace cave
 
             auto start = std::chrono::high_resolution_clock::now();
 
-            runEpoch(trainingLoader, true);
-            runEpoch(evaluationLoader, false);
+            runEpoch(inputs, expecteds);
 
             auto finish = std::chrono::high_resolution_clock::now();
             auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(finish - start);
 
             std::cout << std::setprecision(1)
-            << duration.count()/1000.0 << "s" << std::endl;
+                      << duration.count() / 1000.0 << "s" << std::endl;
 
             learningRate_ -= (initialLearningRate_ - finalLearningRate_) / epochs_;
         }
@@ -263,7 +253,7 @@ namespace cave
         }
     }
 
-    void NeuralNet::runBackwards(BatchResult &batchResult, Matrix &expected, bool bInputError)
+    void NeuralNet::runBackwards(BatchResult &batchResult, Matrix &expecteds, bool bInputError)
     {
         auto &io = batchResult.io;
 
@@ -319,7 +309,9 @@ namespace cave
 
                 break;
             case SOFTMAX:
-                error = output - expected;
+                assert(output.rows() == expecteds.rows() && "expecteds data has different size to output.");
+
+                error = output - expecteds;
                 break;
             }
 

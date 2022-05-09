@@ -1,55 +1,153 @@
 #include "mnistloader.h"
 
 #include <iostream>
+#include <sstream>
 #include <cmath>
+#include "matrix.h"
 
 namespace cave
 {
-    ImageMetaData &MNISTLoader::open()
+    TrainingData MNISTLoader::load()
     {
+        TrainingData trainingData;
+
+        trainingData.input = loadImages();
+        trainingData.expected = loadLabels();
+
+        if(trainingData.input.size() != trainingData.expected.size())
+        {
+            std::stringstream ss;
+            ss << "Image data contains " << trainingData.input.size();
+            ss << " items but label data contains " << trainingData.expected.size();
+            ss << " items.";
+            throw std::logic_error(ss.str());
+            return trainingData;
+        }
+
+        std::cout << "Loaded images and labels." << std::endl;
+
+        return trainingData;
+    }
+
+    std::vector<Matrix> MNISTLoader::loadImages()
+    {
+        std::vector<Matrix> images;
+
         imageStream_.open(imageFile_, std::ios::binary);
 
         if (!imageStream_.is_open())
         {
             std::cerr << "Unable to open " << imageFile_ << std::endl;
-            return metaData_;
+            return images;
         }
+
+        if (readInt(imageStream_) != 2051)
+        {
+            std::cerr << "Not an MNIST image file: " << labelFile_ << std::endl;
+            return images;
+        }
+
+        int items = readInt(imageStream_);
+        imageHeight_ = readInt(imageStream_);
+        imageWidth_ = readInt(imageStream_);
+        int inputSize = imageHeight_ * imageWidth_;
+        int numberBatches = std::ceil(double(items) / batchSize_);
+
+        int totalItemsRead = 0;
+
+        int maxReadSize = batchSize_ * inputSize;
+
+        auto imageData = std::make_unique<char[]>(maxReadSize);
+
+        for (int i = 0; i < numberBatches; ++i)
+        {
+            int itemsToRead = std::min(batchSize_, items - totalItemsRead);
+
+            int bytesToRead = itemsToRead * inputSize;
+
+            imageStream_.read(imageData.get(), bytesToRead);
+
+            if (!imageStream_)
+            {
+                std::cerr << "Unable to fully read " << imageFile_ << std::endl;
+                return images;
+            }
+            cave::Matrix batch(inputSize, itemsToRead, [&](int row, int col, int index){
+                int dataIndex = col * inputSize + row;
+                uint8_t byte = imageData[dataIndex];
+                return byte / 256.0;;
+            });
+
+            images.push_back(std::move(batch));
+
+            totalItemsRead += itemsToRead;
+        }
+
+        imageStream_.close();
+
+        return images;
+    }
+
+    std::vector<Matrix> MNISTLoader::loadLabels()
+    {
+        std::vector<Matrix> labels;
+
+        std::cout << "Loading labels." << std::endl;
 
         labelStream_.open(labelFile_, std::ios::binary);
 
         if (!labelStream_.is_open())
         {
             std::cerr << "Unable to open " << labelFile_ << std::endl;
-            return metaData_;
-        }
-
-        if (readInt(imageStream_) != 2051)
-        {
-            std::cerr << "Not an MNIST image file: " << labelFile_ << std::endl;
-            return metaData_;
+            return labels;
         }
 
         if (readInt(labelStream_) != 2049)
         {
             std::cerr << "Not an MNIST label file: " << labelFile_ << std::endl;
-            return metaData_;
+            return labels;
         }
 
-        metaData_.items = readInt(labelStream_);
+        int items = readInt(labelStream_);
+        int numberBatches = std::ceil(double(items) / batchSize_);
+  
+        int labelSize = 10;
 
-        if (metaData_.items != readInt(imageStream_))
+        auto labelData = std::make_unique<char[]>(batchSize_);
+
+        int totalItemsRead = 0;
+
+        for (int i = 0; i < numberBatches; ++i)
         {
-            std::cerr << "Numbers of items in image and label files differ" << std::endl;
-            return metaData_;
+            int itemsToRead = std::min(batchSize_, items - totalItemsRead);
+
+            int bytesToRead = itemsToRead;
+
+            labelStream_.read(labelData.get(), bytesToRead);
+
+            if (!imageStream_)
+            {
+                std::cerr << "Unable to fully read " << labelFile_ << std::endl;
+                return labels;
+            }
+
+            cave::Matrix batch(labelSize, itemsToRead);
+
+            for(int item = 0; item < itemsToRead; ++item)
+            {
+                int value = labelData[item];
+
+                batch.set(value, item, 1);
+            }
+
+            labels.push_back(std::move(batch));
+
+            totalItemsRead += itemsToRead;
         }
 
-        metaData_.height = readInt(imageStream_);
-        metaData_.width = readInt(imageStream_);
-        metaData_.inputSize = metaData_.height * metaData_.width;
+        labelStream_.close();
 
-        metaData_.numberBatches = std::ceil(double(metaData_.items) / metaData_.batchSize);
-
-        return metaData_;
+        return labels;
     }
 
     std::uint32_t MNISTLoader::readInt(std::ifstream &in)
@@ -66,52 +164,5 @@ namespace cave
         pInt[0] = bytes[3];
 
         return result;
-    }
-
-    ImageMetaData &MNISTLoader::getMetaData()
-    {
-        return metaData_;
-    }
-
-    BatchData MNISTLoader::getBatch()
-    {
-        std::lock_guard<std::mutex> guard(mtxRead_);
-
-        BatchData batchData;
-
-        batchData.numberRead = std::min(metaData_.batchSize, metaData_.items - totalItemsRead_);
-        totalItemsRead_ += batchData.numberRead;
-
-        int sizeImageData = metaData_.width * metaData_.height * batchData.numberRead;
-        int sizeLabelData = batchData.numberRead;
-
-        auto imageData = std::make_unique<char[]>(sizeImageData);
-        auto labelData = std::make_unique<char[]>(sizeLabelData);
-
-        imageStream_.read(imageData.get(), sizeImageData);
-        labelStream_.read(labelData.get(), sizeLabelData);
-
-        batchData.input.resize(sizeImageData);
-        batchData.expected.resize(sizeLabelData * 10);
-
-        for(int i = 0; i < sizeImageData; ++i)
-        {
-            uint8_t byte = imageData[i];
-
-            batchData.input[i] = byte/256.0;
-        }
-
-        for(int i = 0; i < sizeLabelData; ++i)
-        {
-            batchData.expected[i * 10 + labelData[i]] = 1;
-        }
-
-        return batchData;
-    }
-
-    void MNISTLoader::close()
-    {
-        imageStream_.close();
-        labelStream_.close();
     }
 }

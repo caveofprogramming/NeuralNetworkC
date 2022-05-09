@@ -8,16 +8,17 @@ namespace cave
     class TestLoader : public Loader
     {
     private:
-        MetaData metaData_;
-        int totalItemsRead_{0};
-        std::mutex mtxRead_;
+        int items_;
+        int inputSize_;
+        int outputSize_;
+        int batchSize_;
 
     public:
-        TestLoader(int items, int inputSize, int outputSize, int batchSize);
-
-        MetaData &open();
-        MetaData &getMetaData();
-        BatchData getBatch();
-        void close();
+        TestLoader(int items, int inputSize, int outputSize, int batchSize)
+            : items_(items), inputSize_(inputSize), outputSize_{outputSize}, batchSize_{batchSize}
+        {
+        }
+        
+        TrainingData load();
     };
 }

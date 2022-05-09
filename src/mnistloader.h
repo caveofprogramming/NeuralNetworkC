@@ -9,17 +9,9 @@
 
 namespace cave
 {
-    struct ImageMetaData: public MetaData
-    {
-        int width;
-        int height;
-    };
-
     class MNISTLoader : public Loader
     {
     private:
-        ImageMetaData metaData_;
-
         std::ifstream imageStream_;
         std::ifstream labelStream_;
 
@@ -28,21 +20,24 @@ namespace cave
 
         std::uint32_t readInt(std::ifstream &in);
 
-        int totalItemsRead_{0};
+        std::vector<Matrix> loadImages();
+        std::vector<Matrix> loadLabels();
 
-        std::mutex mtxRead_;
+        int batchSize_{0};
+        int items_{0};
+        int imageWidth_{0};
+        int imageHeight_{0};
 
     public:
-        MNISTLoader(int batchSize, std::string inputDir, std::string imageFile, std::string labelFile) 
+        MNISTLoader(int batchSize, std::string inputDir, std::string imageFile, std::string labelFile): batchSize_{batchSize}
         {
-            metaData_.batchSize = batchSize;
             imageFile_ = inputDir + "/" + imageFile;
             labelFile_ = inputDir + "/" + labelFile;
         } 
 
-        ImageMetaData &open();
-        ImageMetaData &getMetaData();
-        BatchData getBatch();
-        void close();
+        int getImageWidth() { return imageWidth_; }
+        int getImageHeight() { return imageHeight_; }
+
+        TrainingData load();
     };
 }

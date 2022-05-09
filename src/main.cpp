@@ -37,35 +37,40 @@ int main()
 
     std::string inputDir = "../data";
 
+/*
     MNISTLoader trainLoader(batchSize, inputDir, "train-images-idx3-ubyte", "train-labels-idx1-ubyte");
     MNISTLoader evalLoader(batchSize, inputDir, "t10k-images-idx3-ubyte", "t10k-labels-idx1-ubyte");
+*/
 
     ImageWriter imageWriter("../data");
-
     imageWriter.write("../images");
-
     return 0;
 
-    //TestLoader testLoader(60000, inputSize, outputSize, batchSize);
-    //TestLoader evalLoader(10000, inputSize, outputSize, batchSize);
+
+    /*
+    TestLoader trainingLoader(60000, inputSize, outputSize, batchSize);
+    TestLoader evalLoader(10000, inputSize, outputSize, batchSize);
+
+    TrainingData trainingData = trainingLoader.load();
+    TrainingData evalData = evalLoader.load();
+    
 
     NeuralNet neuralNet;
-    neuralNet.add(NeuralNet::DENSE, 100, inputSize);
-    neuralNet.add(NeuralNet::RELU);
-    neuralNet.add(NeuralNet::DENSE, 50);
+    neuralNet.add(NeuralNet::DENSE, 200, inputSize);
     neuralNet.add(NeuralNet::RELU);
     neuralNet.add(NeuralNet::DENSE, outputSize);
     neuralNet.add(NeuralNet::SOFTMAX);
+    neuralNet.setScaleInitialWeights(0.2);
     neuralNet.setEpochs(20);
     neuralNet.setLearningRates(0.02, 0.001);
 
-    neuralNet.fit(trainLoader, evalLoader);
+    neuralNet.fit(trainingData.input, trainingData.expected);
+    double accuracy = neuralNet.evaluate(evalData.input, evalData.expected);
+
+    cout << std::fixed << std::setprecision(2) << "Accuracy: " << accuracy << "%" << std::endl;
 
     cout << neuralNet << endl;
-
-    NeuralNetTest test;
-    //test.all();
-    // neuralNet.fit(testLoader, evalLoader);
+*/
 
     return 0;
 }

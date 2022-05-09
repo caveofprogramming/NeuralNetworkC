@@ -2,54 +2,30 @@
 #include "matrixfunctions.h"
 #include <iostream>
 
-#include <math.h>
+#include <cmath>
 
 namespace cave
 {
-    TestLoader::TestLoader(int items, int inputSize, int outputSize, int batchSize)
+    TrainingData TestLoader::load()
     {
-        metaData_.items = items;
-        metaData_.inputSize = inputSize;
-        metaData_.outputSize = outputSize;
-        metaData_.batchSize = batchSize;
-        metaData_.numberBatches = ceil(double(items) / batchSize);
-    }
+        TrainingData trainingData;
 
-    MetaData &TestLoader::open()
-    {
-        return metaData_;
-    }
+        int totalItems = 0;
 
-    MetaData &TestLoader::getMetaData()
-    {
-        return metaData_;
-    }
+        int numberBatches = std::ceil(double(items_)/batchSize_);
 
-    BatchData TestLoader::getBatch()
-    {
-        std::lock_guard<std::mutex> guard(mtxRead_);
+        for(int batch = 0; batch < numberBatches; ++batch)
+        {
+            int itemsToRead = std::min(batchSize_, items_ - totalItems);
 
-        int itemsRead = std::min(metaData_.items - totalItemsRead_, metaData_.batchSize);
-        
-        auto testData = generateTestData(itemsRead, metaData_.inputSize, metaData_.outputSize);
-       
-        Matrix input = testData.input.transpose();
-        Matrix output = testData.output.transpose();
+            auto testData = generateTestData(itemsToRead, inputSize_, outputSize_);
 
-        BatchData batchData;
+            trainingData.input.push_back(std::move(testData.input));
+            trainingData.expected.push_back(std::move(testData.output));
 
-        batchData.input = input.get();
-        batchData.expected = output.get();
+            totalItems += itemsToRead;
+        }
 
-        totalItemsRead_ += itemsRead;
-
-        batchData.numberRead = itemsRead;
-        
-        return batchData;
-    }
-
-    void TestLoader::close()
-    {
-        totalItemsRead_ = 0;
+        return trainingData;
     }
 }
