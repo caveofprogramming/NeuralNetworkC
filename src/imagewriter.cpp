@@ -109,7 +109,6 @@ namespace cave
     {
         int imageWidth = loader_.getImageWidth();
         int imageHeight = loader_.getImageHeight();
-        int imageSize = imageWidth * imageHeight;
         int montageWidth = cols_ * imageWidth;
         int montageHeight = rows_ * imageHeight;
 

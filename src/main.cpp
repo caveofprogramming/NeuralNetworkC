@@ -11,6 +11,7 @@
 #include "threadpool.h"
 #include "neuralnettest.h"
 #include "mnistloader.h"
+#include "profiler.h"
 
 using namespace std;
 using namespace cave;
@@ -61,7 +62,7 @@ int main()
     neuralNet.add(NeuralNet::DENSE, outputSize);
     neuralNet.add(NeuralNet::SOFTMAX);
     neuralNet.setScaleInitialWeights(0.2);
-    neuralNet.setEpochs(20);
+    neuralNet.setEpochs(1);
     neuralNet.setThreads(4);
     neuralNet.setLearningRates(0.02, 0.001);
 
@@ -73,6 +74,8 @@ int main()
     cout << std::fixed << std::setprecision(2) << "Accuracy: " << accuracy << "%" << std::endl;
 
     cout << neuralNet << endl;
+
+    cout << gProfiler << endl;
 
     return 0;
 }

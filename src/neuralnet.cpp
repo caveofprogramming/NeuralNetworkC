@@ -12,6 +12,7 @@
 #include "blockingqueue.h"
 #include "matrixfunctions.h"
 #include "threadpool.h"
+#include "profiler.h"
 
 namespace cave
 {
@@ -123,16 +124,18 @@ namespace cave
         int totalCorrect = 0;
         int totalItems = 0;
 
-        int printDot = std::ceil(inputs.size()/30);
+        int printDot = std::ceil(inputs.size() / 30);
 
         cave::ThreadPool<BatchResult> threadPool(threads_);
 
         for (int i = 0; i < inputs.size(); ++i)
         {
+            // clang-format off
             threadPool.submit([this, i, &inputs, &expecteds]()
-                              { 
-                                  return runBatch(inputs[i], expecteds[i]); 
-                                  });
+            { 
+                return runBatch(inputs[i], expecteds[i]); 
+            });
+            // clang-format on
         }
 
         threadPool.start();
@@ -164,6 +167,8 @@ namespace cave
 
     void NeuralNet::fit(std::vector<Matrix> &inputs, std::vector<Matrix> &expecteds)
     {
+        auto timing = gProfiler.start("fit");
+
         learningRate_ = initialLearningRate_;
 
         if (weights_.size() > 0)
@@ -197,10 +202,13 @@ namespace cave
 
             learningRate_ -= (initialLearningRate_ - finalLearningRate_) / epochs_;
         }
+
+        gProfiler.end(timing);
     }
 
     void NeuralNet::runForwards(BatchResult &result, Matrix &input)
     {
+        auto timing = gProfiler.start("runForwards");
         int weightIndex = 0;
 
         result.io.push_back(input);
@@ -223,7 +231,7 @@ namespace cave
                 lock.unlock();
 
                 result.io.back().modify([&](int row, int col, int index, double value)
-                             { return value + bias.get(row); });
+                                        { return value + bias.get(row); });
 
                 ++weightIndex;
             }
@@ -238,10 +246,13 @@ namespace cave
 
             ++ioIndex;
         }
+
+        gProfiler.end(timing);
     }
 
     void NeuralNet::runBackwards(BatchResult &batchResult, Matrix &expecteds, bool bInputError)
     {
+        auto timing = gProfiler.start("runBackwards");
         auto &io = batchResult.io;
 
         Matrix &output = io.back();
@@ -304,10 +315,13 @@ namespace cave
 
             batchResult.errors.push_front(error);
         }
+
+        gProfiler.end(timing);
     }
 
     void NeuralNet::adjust(BatchResult &batchResult, double learningRate)
     {
+        auto timing = gProfiler.start("adjust");
         for (std::size_t i = 0; i < weights_.size(); ++i)
         {
             int weightIndex = weightIndices_[i];
@@ -328,6 +342,8 @@ namespace cave
                           { return value - weightAdjust.get(index); });
             lock.unlock();
         }
+
+        gProfiler.end(timing);
     }
 
     NeuralNet::NeuralNet(std::vector<int> layerSizes)

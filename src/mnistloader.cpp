@@ -91,9 +91,7 @@ namespace cave
     std::vector<Matrix> MNISTLoader::loadLabels()
     {
         std::vector<Matrix> labels;
-
-        std::cout << "Loading labels." << std::endl;
-
+        
         labelStream_.open(labelFile_, std::ios::binary);
 
         if (!labelStream_.is_open())
