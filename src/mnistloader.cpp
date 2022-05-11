@@ -78,7 +78,7 @@ namespace cave
                 return byte / 256.0;;
             });
 
-            images.push_back(std::move(batch));
+            images.push_back(batch);
 
             totalItemsRead += itemsToRead;
         }
@@ -140,7 +140,7 @@ namespace cave
                 batch.set(value, item, 1);
             }
 
-            labels.push_back(std::move(batch));
+            labels.push_back(batch);
 
             totalItemsRead += itemsToRead;
         }

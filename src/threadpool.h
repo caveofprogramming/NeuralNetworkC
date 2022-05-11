@@ -46,7 +46,7 @@ namespace cave
                 E result = func();
 
                 std::unique_lock<std::mutex> resultsLock(mtxResults_);
-                results_.push(std::move(result));
+                results_.push(result);
                 resultsLock.unlock();
                 cond_.notify_one();
             }
@@ -84,7 +84,7 @@ namespace cave
             cond_.wait(lock, [this]()
                        { return results_.size() > 0; });
 
-            E result = std::move(results_.front());
+            E result = results_.front();
             results_.pop();
             return result;
         }

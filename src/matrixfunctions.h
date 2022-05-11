@@ -1,21 +1,16 @@
 #include "matrix.h"
 #include <utility>
 #include <functional>
+#include <string>
 
 namespace cave
 {
     struct IO
     {
-        IO(Matrix &&input, Matrix &&output)
+        IO(Matrix input, Matrix output)
         {
-            this->input = std::move(input);
-            this->output = std::move(output);
-        }
-
-        IO(IO &&other)
-        {
-            this->input = std::move(other.input);
-            this->output = std::move(other.output);
+            this->input = input;
+            this->output = output;
         }
 
         Matrix input;
@@ -31,4 +26,5 @@ namespace cave
     Matrix gradient(Matrix *input, std::function<Matrix()> func);
     Matrix incrementElement(const Matrix &m, int row, int col, double value);
     double numberCorrect(const Matrix &actual, Matrix &expected);
+    std::string toString(Matrix &m);
 }

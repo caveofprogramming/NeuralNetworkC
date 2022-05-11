@@ -17,6 +17,9 @@ namespace cave
 {
     std::ostream &operator<<(std::ostream &out, NeuralNet &neuralNet)
     {
+        out << "Threads: " << neuralNet.threads_ << std::endl;
+        out << "Epochs: " << neuralNet.epochs_ << std::endl;
+
         if (neuralNet.weights_.size() > 0)
         {
             out << "Layers:\n\n";
@@ -66,8 +69,8 @@ namespace cave
 
             Matrix bias(rows, 1);
 
-            weights_.push_back(std::move(weight));
-            biases_.push_back(std::move(bias));
+            weights_.push_back(weight);
+            biases_.push_back(bias);
         }
 
         transforms_.push_back(transform);
@@ -94,22 +97,7 @@ namespace cave
         BatchResult result;
         runForwards(result, in);
 
-        return std::move(result.io.back());
-    }
-
-    std::vector<double> NeuralNet::predict(std::vector<double> input)
-    {
-        if (weights_.size() > 0)
-        {
-            assert(int(input.size()) == weights_[0].cols());
-        }
-
-        Matrix mInput(input.size(), 1, input, false);
-        BatchResult result;
-
-        runForwards(result, mInput);
-
-        return result.io.back().get();
+        return result.io.back();
     }
 
     BatchResult NeuralNet::runBatch(Matrix &input, Matrix &expected)
@@ -135,15 +123,16 @@ namespace cave
         int totalCorrect = 0;
         int totalItems = 0;
 
-        int printDot = std::ceil(inputs.size());
+        int printDot = std::ceil(inputs.size()/30);
 
         cave::ThreadPool<BatchResult> threadPool(threads_);
 
         for (int i = 0; i < inputs.size(); ++i)
         {
-
-            threadPool.submit([&]()
-                              { return runBatch(inputs[i], expecteds[i]); });
+            threadPool.submit([this, i, &inputs, &expecteds]()
+                              { 
+                                  return runBatch(inputs[i], expecteds[i]); 
+                                  });
         }
 
         threadPool.start();
@@ -214,7 +203,7 @@ namespace cave
     {
         int weightIndex = 0;
 
-        result.io.push_back(std::move(input));
+        result.io.push_back(input);
 
         int ioIndex = 0;
 
@@ -230,24 +219,22 @@ namespace cave
                 Matrix &bias = biases_[weightIndex];
 
                 std::unique_lock<std::mutex> lock(mtxWeights_);
-                input = (weight * result.io.back());
+                result.io.push_back(weight * output);
                 lock.unlock();
 
-                input.modify([&](int row, int col, int index, double value)
+                result.io.back().modify([&](int row, int col, int index, double value)
                              { return value + bias.get(row); });
 
                 ++weightIndex;
             }
             break;
             case RELU:
-                input = relu(result.io.back());
+                result.io.push_back(relu(output));
                 break;
             case SOFTMAX:
-                input = softmax(result.io.back());
+                result.io.push_back(softmax(output));
                 break;
             }
-
-            result.io.push_back(std::move(input));
 
             ++ioIndex;
         }
@@ -315,7 +302,7 @@ namespace cave
                 break;
             }
 
-            batchResult.errors.push_front(std::move(error));
+            batchResult.errors.push_front(error);
         }
     }
 

@@ -4,6 +4,7 @@
 #include <utility>
 #include <random>
 #include <iostream>
+#include <sstream>
 
 namespace cave
 {
@@ -144,7 +145,7 @@ namespace cave
             }
         }
 
-        return IO(std::move(input), std::move(output));
+        return IO(input, output);
     }
 
     Matrix relu(Matrix &input)
@@ -166,5 +167,14 @@ namespace cave
                       { return value / sum[col]; });
 
         return result;
+    }
+
+    std::string toString(Matrix &m)
+    {
+        std::stringstream ss;
+
+        ss << "[" << m.rows() << "x" << m.cols() << "]";
+
+        return ss.str();
     }
 }

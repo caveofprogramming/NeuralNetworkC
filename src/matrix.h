@@ -15,31 +15,7 @@ namespace cave
         std::vector<double> v_;
 
     public:
-        Matrix(){};
-
-        Matrix(Matrix &&other)
-        {
-            v_ = std::move(other.v_);
-            rows_ = other.rows_;
-            cols_ = other.cols_;
-
-            other.rows_ = 0;
-            other.cols_ = 0;
-        }
-
-        Matrix &operator=(Matrix &&other)
-        {
-            assert(&other != this);
-   
-            v_ = std::move(other.v_);
-            rows_ = other.rows_;
-            cols_ = other.cols_;
-
-            other.rows_ = 0;
-            other.cols_ = 0;
-
-            return *this;
-        }
+        Matrix(){}
 
         Matrix(int rows, int cols) : rows_(rows), cols_(cols)
         {
@@ -93,8 +69,6 @@ namespace cave
         void forEach(std::function<void(int, int, double)> f) const;
         Matrix &modify(std::function<double(int, int, int, double)> f);
         Matrix apply(std::function<double(int, int, int, double)> f);
-
-        Matrix(Matrix &other) = delete;
 
         std::string str() const;
 

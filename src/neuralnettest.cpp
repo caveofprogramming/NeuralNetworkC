@@ -20,12 +20,14 @@ namespace cave
         neuralNet_.add(NeuralNet::DENSE, outputSize_);
         neuralNet_.add(NeuralNet::SOFTMAX);
         neuralNet_.setEpochs(20);
-        neuralNet_.setThreads(4);
+        neuralNet_.setThreads(1);
         neuralNet_.setLearningRates(0.02, 0.001);
     }
 
     bool NeuralNetTest::all()
     {
+
+        std::cout << neuralNet_ << std::endl;
 
         std::cout << "Testing backprop ... " << std::flush;
         bool backpropPassed = testBackprop();
@@ -61,11 +63,21 @@ namespace cave
 
         neuralNet_.fit(trainingData.input, trainingData.expected);
 
-        Matrix result = neuralNet_.predict(evalData.input[0]);
+        int totalItems = 0;
+        int totalCorrect = 0;
 
-        int correct = numberCorrect(result, evalData.expected[0]);
+        for (int i = 0; i < evalData.input.size(); ++i)
+        {
+            totalItems += evalData.input[i].cols();
+            Matrix result = neuralNet_.predict(evalData.input[i]);
+            totalCorrect += numberCorrect(result, evalData.expected[i]);
+        }
 
-        if (double(correct) / result.cols() > 0.96)
+        double fractionCorrect = double(totalCorrect)/totalItems;
+
+        std::cout << "Fraction correct: " << fractionCorrect << " (" << totalItems << " items)" << std::endl;
+
+        if (fractionCorrect > 0.96)
         {
             return true;
         }
@@ -84,10 +96,8 @@ namespace cave
         BatchResult result;
 
         neuralNet_.runForwards(result, input);
-        neuralNet_.runBackwards(result, data.expected[0]);
-
+        neuralNet_.runBackwards(result, data.expected[0], true);
         Matrix &inputError = result.errors.front();
-
         // clang-format off
         Matrix approximatedError = gradient(&input, [&]()
         {
@@ -113,6 +123,12 @@ namespace cave
         if (std::abs(inputError.sum()) < 0.0001)
         {
             std::cout << "Input error contained only zero. Consider re-running test." << std::endl;
+        }
+
+        if (inputError.cols() != approximatedError.cols())
+        {
+            std::cerr << "Calculated error has different number of columns to approximated error" << std::endl;
+            return false;
         }
 
         return true;

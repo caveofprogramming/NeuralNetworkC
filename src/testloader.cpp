@@ -20,8 +20,8 @@ namespace cave
 
             auto testData = generateTestData(itemsToRead, inputSize_, outputSize_);
 
-            trainingData.input.push_back(std::move(testData.input));
-            trainingData.expected.push_back(std::move(testData.output));
+            trainingData.input.push_back(testData.input);
+            trainingData.expected.push_back(testData.output);
 
             totalItems += itemsToRead;
         }

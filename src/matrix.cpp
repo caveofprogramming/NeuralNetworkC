@@ -11,7 +11,7 @@ namespace cave
     {
         if (rowOrder)
         {
-            v_ = std::move(values);
+            v_ = values;
         }
         else
         {
@@ -19,7 +19,7 @@ namespace cave
             m.v_ = values;
             Matrix transposed = m.transpose();
 
-            v_ = std::move(transposed.v_);
+            v_ = transposed.v_;
         }
 
         rows_ = rows;

@@ -13,30 +13,6 @@ namespace cave
 
     struct BatchResult
     {
-        BatchResult() {}
-
-        BatchResult(BatchResult &&other)
-        {
-            io = std::move(other.io);
-            errors = std::move(other.errors);
-
-            numberItems = other.numberItems;
-            numberCorrect = other.numberCorrect;
-            totalLoss = other.totalLoss;
-        }
-
-        BatchResult &operator=(BatchResult &&other)
-        {
-            io = std::move(other.io);
-            errors = std::move(other.errors);
-
-            numberItems = other.numberItems;
-            numberCorrect = other.numberCorrect;
-            totalLoss = other.totalLoss;
-
-            return *this;
-        }
-
         std::vector<Matrix> io;
         std::deque<Matrix> errors;
 
