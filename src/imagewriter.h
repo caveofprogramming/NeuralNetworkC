@@ -24,6 +24,7 @@ namespace cave
             try
             {
                 neuralNet_.load(file);
+                useNeuralNet_ = true;
                 std::cout << "Loaded '" << file << "'" << std::endl;
             }
             catch(const std::exception& e)
@@ -35,7 +36,7 @@ namespace cave
         bool write(std::string outputDir);
 
     private:
-        void writeImages(Matrix &images, char *imageData);
+        void writeImages(Matrix &images, Matrix &labels, char *imageData);
         void writeLabels(Matrix &labels, std::ofstream &out);
     };
 }

@@ -10,20 +10,41 @@ namespace cave
 {
     double numberCorrect(const Matrix &actual, Matrix &expected)
     {
-        Matrix actualLargest = actual.largestRowIndexes();
-        Matrix expectedLargest = expected.largestRowIndexes();
+        std::vector<bool> tally = getCorrect(actual, expected);
 
         int correct = 0;
 
-        for(int i = 0; i < actualLargest.cols(); ++i)
+        for (bool value : tally)
         {
-            if(std::abs(actualLargest.get(i) - expectedLargest.get(i)) < 0.1)
+            if (value)
             {
                 ++correct;
             }
         }
 
         return correct;
+    }
+
+    std::vector<bool> getCorrect(const Matrix &actual, Matrix &expected)
+    {
+        Matrix actualLargest = actual.largestRowIndexes();
+        Matrix expectedLargest = expected.largestRowIndexes();
+
+        std::vector<bool> result;
+
+        for (int i = 0; i < actualLargest.cols(); ++i)
+        {
+            if (std::abs(actualLargest.get(i) - expectedLargest.get(i)) < 0.1)
+            {
+                result.push_back(true);
+            }
+            else
+            {
+                result.push_back(false);
+            }
+        }
+
+        return result;
     }
 
     Matrix gradient(Matrix *input, std::function<Matrix()> func)
@@ -116,7 +137,7 @@ namespace cave
 
         std::uniform_int_distribution<int> uniform(1, outputSize);
         std::normal_distribution<double> normal(0, 1);
-      
+
         Matrix input(inputSize, items);
         Matrix output(outputSize, items);
 

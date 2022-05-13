@@ -7,6 +7,7 @@
 #include <assert.h>
 #include "bitmapfileheader.h"
 #include "bitmapinfoheader.h"
+#include "matrixfunctions.h"
 
 using namespace caveofprogramming;
 
@@ -66,13 +67,13 @@ namespace cave
 
             auto imageData = std::make_unique<char[]>(batchDataSize);
 
-            writeImages(data.input[batch], imageData.get());
+            writeImages(data.input[batch], data.expected[batch], imageData.get());
             writeLabels(data.expected[batch], labelFile);
 
             imageFile.write((char *)&fileHeader, sizeof(fileHeader));
             imageFile.write((char *)&infoHeader, sizeof(infoHeader));
             imageFile.write((char *)imageData.get(), batchDataSize);
-            
+
             imageFile.close();
             labelFile.close();
         }
@@ -106,12 +107,21 @@ namespace cave
         }
     }
 
-    void ImageWriter::writeImages(Matrix &images, char *imageData)
+    void ImageWriter::writeImages(Matrix &images, Matrix &labels, char *imageData)
     {
         int imageWidth = loader_.getImageWidth();
         int imageHeight = loader_.getImageHeight();
         int montageWidth = cols_ * imageWidth;
         int montageHeight = rows_ * imageHeight;
+
+        std::vector<bool> correct;
+
+        if (useNeuralNet_)
+        {
+            Matrix result = neuralNet_.predict(images);
+
+            correct = cave::getCorrect(result, labels);
+        }
 
         for (int imageIndex = 0; imageIndex < images.cols(); ++imageIndex)
         {
@@ -130,9 +140,14 @@ namespace cave
 
                 double value = images.get(pixelIndex, imageIndex);
 
-                imageData[destinationPixelIndex * 3] = char(value * 255);
-                imageData[destinationPixelIndex * 3 + 1] = char(value * 255);
-                imageData[destinationPixelIndex * 3 + 2] = char(value * 255);
+                if (correct[imageIndex])
+                {
+                    imageData[destinationPixelIndex * 3 + 1] = char(value * 255);
+                }
+                else
+                {
+                    imageData[destinationPixelIndex * 3] = char(value * 255);
+                }
             }
         }
     }

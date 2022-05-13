@@ -68,9 +68,11 @@ int main(int argc, char *argv[])
     MNISTLoader trainingLoader(batchSize, inputDir, "train-images-idx3-ubyte", "train-labels-idx1-ubyte");
     MNISTLoader evalLoader(batchSize, inputDir, "t10k-images-idx3-ubyte", "t10k-labels-idx1-ubyte");
 
+    /*
     ImageWriter imageWriter("../data");
     imageWriter.write("../images");
     return 0;
+    */
 
     /*
     NeuralNetTest test;
