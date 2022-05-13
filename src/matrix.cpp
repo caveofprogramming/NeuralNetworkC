@@ -5,6 +5,8 @@
 #include <exception>
 #include <cmath>
 
+#include "fileutil.h"
+
 namespace cave
 {
     Matrix::Matrix(int rows, int cols, std::vector<double> values, bool rowOrder)
@@ -24,6 +26,20 @@ namespace cave
 
         rows_ = rows;
         cols_ = cols;
+    }
+
+    void  Matrix::save(std::ostream &out)
+    {
+        cave::saveValue<int>(out, rows_);   
+        cave::saveValue<int>(out, cols_);
+        cave::saveValueVector<double>(out, v_);   
+    }
+
+    void  Matrix::load(std::istream &in)
+    {
+        rows_ = cave::loadValue<int>(in);
+        cols_ = cave::loadValue<int>(in);
+        v_ = cave::loadValueVector<double>(in);
     }
 
     bool Matrix::operator!=(Matrix const &other)
@@ -131,13 +147,17 @@ namespace cave
 
         int index = 0;
 
+        int rowCols = 0;
+
         for (int row = 0; row < result.rows_; ++row)
         {
             for (int col = 0; col < result.cols_; ++col)
             {
+                rowCols = row * m1.cols_;
+
                 for (int n = 0; n < m1.cols_; ++n)
                 {
-                    result.v_[index] += m1.v_[row * m1.cols_ + n] * m2.v_[col + n * m2.cols_];
+                    result.v_[index] += m1.v_[rowCols + n] * m2.v_[col + n * m2.cols_];
                 }
                 ++index;
             }
@@ -160,6 +180,18 @@ namespace cave
 
         return Matrix(m1.rows_, m1.cols_, [&](int index)
                       { return m1[index] - m2[index]; });
+    }
+
+    Matrix operator-=(Matrix &m1, const Matrix &m2)
+    {
+        assert(m1.rows_ == m2.rows_ && m1.cols_ == m2.cols_ && "Matrix -= failed");
+
+        for (int i = 0; i < m1.v_.size(); ++i)
+        {
+            m1.v_[i] -= m2.v_[i];
+        }
+
+        return m1;
     }
 
     Matrix &Matrix::modify(std::function<double(int, int, int, double)> f)
@@ -196,7 +228,7 @@ namespace cave
         const int maxRows = 8;
         const int maxCols = 8;
 
-        if(rows_ >= maxRows || cols_ >= maxCols)
+        if (rows_ >= maxRows || cols_ >= maxCols)
         {
             ss << "\n[truncated from " << rows_ << "x" << cols_ << "]";
         }

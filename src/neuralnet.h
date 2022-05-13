@@ -45,7 +45,6 @@ namespace cave
         double initialLearningRate_{0.01};
         double finalLearningRate_{0.001};
         double learningRate_{0.01};
-        bool errorAtInput_{false};
 
         int epochs_{20};
         int threads_{4};
@@ -73,6 +72,8 @@ namespace cave
         Matrix &getWeight(int i) { return weights_[i]; };
         Matrix &getBias(int i) { return biases_[i]; };
         void setThreads(int threads){ threads_ = threads;}
+        void save(std::string file);
+        void load(std::string file);
 
         friend std::ostream &operator<<(std::ostream &out, NeuralNet &neuralNet);
 

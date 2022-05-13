@@ -30,19 +30,47 @@ int work(int id)
     return id;
 }
 
-int main()
+int main(int argc, char *argv[])
 {
+    if (argc == 0)
+    {
+        std::cout << "Expected program name as first command line argument." << std::endl;
+        return 0;
+    }
+    else if (argc > 3)
+    {
+        std::cout << "Too many arguments." << std::endl;
+        return 0;
+    }
+
+    if (argc == 1)
+    {
+        // Got program name and nothing else.
+        std::cout << "usage: " << argv[0] << " <data directory> [saved state file]" << std::endl;
+        return 0;
+    }
+
+    std::string inputDir = argv[1];
+
+    bool loadFromFile = false;
+    std::string stateFile;
+
+    if (argc == 3)
+    {
+        stateFile = argv[2];
+        loadFromFile = true;
+    }
+
     int inputSize = 784;
     int outputSize = 10;
     int batchSize = 32;
 
-    std::string inputDir = "../data";
-
     MNISTLoader trainingLoader(batchSize, inputDir, "train-images-idx3-ubyte", "train-labels-idx1-ubyte");
     MNISTLoader evalLoader(batchSize, inputDir, "t10k-images-idx3-ubyte", "t10k-labels-idx1-ubyte");
 
-    // ImageWriter imageWriter("../data");
-    // imageWriter.write("../images");
+    ImageWriter imageWriter("../data");
+    imageWriter.write("../images");
+    return 0;
 
     /*
     NeuralNetTest test;
@@ -50,32 +78,65 @@ int main()
     return 0;
     */
 
-    // TestLoader trainingLoader(60000, inputSize, outputSize, batchSize);
-    // TestLoader evalLoader(10000, inputSize, outputSize, batchSize);
+    /*
+    TestLoader trainingLoader(60000, inputSize, outputSize, batchSize);
+    TestLoader evalLoader(10000, inputSize, outputSize, batchSize);
+    */
 
     TrainingData trainingData = trainingLoader.load();
     TrainingData evalData = evalLoader.load();
 
     NeuralNet neuralNet;
-    neuralNet.add(NeuralNet::DENSE, 200, inputSize);
-    neuralNet.add(NeuralNet::RELU);
-    neuralNet.add(NeuralNet::DENSE, outputSize);
-    neuralNet.add(NeuralNet::SOFTMAX);
-    neuralNet.setScaleInitialWeights(0.2);
-    neuralNet.setEpochs(1);
-    neuralNet.setThreads(4);
-    neuralNet.setLearningRates(0.02, 0.001);
 
-    std::cout << neuralNet << std::endl;
+    if (loadFromFile)
+    {
+        try
+        {
+            neuralNet.load(stateFile);
+        }
+        catch (const FileException &e)
+        {
+            std::cerr << "'" << stateFile << "': " << e.what() << std::endl;
+            return 0;
+        }
+    }
+    else
+    {
+        neuralNet.add(NeuralNet::DENSE, 200, inputSize);
+        neuralNet.add(NeuralNet::RELU);
+        neuralNet.add(NeuralNet::DENSE, outputSize);
+        neuralNet.add(NeuralNet::SOFTMAX);
+        neuralNet.setScaleInitialWeights(0.2);
+        neuralNet.setEpochs(100);
+        neuralNet.setThreads(4);
+        neuralNet.setLearningRates(0.02, 0.001);
+    }
+
+    std::cout << "\n"
+              << neuralNet << std::endl;
 
     neuralNet.fit(trainingData.input, trainingData.expected);
+
     double accuracy = neuralNet.evaluate(evalData.input, evalData.expected);
 
-    cout << std::fixed << std::setprecision(2) << "Accuracy: " << accuracy << "%" << std::endl;
-
-    cout << neuralNet << endl;
+    cout << std::fixed << std::setprecision(2) << "\nAccuracy: " << 100.0 * accuracy << " %" << std::endl;
 
     cout << gProfiler << endl;
+
+
+    std::string defaultFile = "default.ann";
+
+    std::cout << "Saving to " << defaultFile << " ..." << std::flush;
+    try
+    {
+        neuralNet.save(defaultFile);
+    }
+    catch (const FileException &e)
+    {
+        std::cout << "'" << defaultFile << "': " << e.what() << std::endl;
+    }
+
+    std::cout << " saved." << std::endl;
 
     return 0;
 }

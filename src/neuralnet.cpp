@@ -8,11 +8,14 @@
 #include <cmath>
 #include <iomanip>
 #include <chrono>
+#include <fstream>
+#include <iostream>
 
 #include "blockingqueue.h"
 #include "matrixfunctions.h"
 #include "threadpool.h"
 #include "profiler.h"
+#include "fileutil.h"
 
 namespace cave
 {
@@ -20,10 +23,13 @@ namespace cave
     {
         out << "Threads: " << neuralNet.threads_ << std::endl;
         out << "Epochs: " << neuralNet.epochs_ << std::endl;
+        out << "Initial learning rate: " << neuralNet.initialLearningRate_ << std::endl;
+        out << "Final learning rate: " << neuralNet.finalLearningRate_ << std::endl;
+        out << "Weight scale: " << neuralNet.scaleInitialWeights_ << std::endl;
 
         if (neuralNet.weights_.size() > 0)
         {
-            out << "Layers:\n\n";
+            out << "\nLayers:\n\n";
         }
 
         int weightIndex = 0;
@@ -42,6 +48,67 @@ namespace cave
         }
 
         return out;
+    }
+
+    void NeuralNet::save(std::string file)
+    {
+        std::ofstream out;
+
+        out.open(file, std::ios::binary);
+
+
+        if (!out.is_open())
+        {
+            throw FileException("Unable to open file");
+        }
+
+        cave::saveValueVector<Transform>(out, transforms_);
+
+        cave::saveSerializableVector<Matrix>(out, weights_);
+        cave::saveSerializableVector<Matrix>(out, biases_);
+        cave::saveValueVector<int>(out, weightIndices_);
+
+        cave::saveValue<double>(out, scaleInitialWeights_);
+        cave::saveValue<double>(out, initialLearningRate_);
+        cave::saveValue<double>(out, finalLearningRate_);
+        cave::saveValue<int>(out, epochs_);
+        cave::saveValue<int>(out, threads_);
+
+        out.close();
+
+        if (!out)
+        {
+           throw FileException("Unable to close file");
+        }
+
+    }
+
+    void NeuralNet::load(std::string file)
+    {
+        std::ifstream in;
+
+        in.open(file, std::ios::binary);
+
+        if (!in.is_open())
+        {
+            throw FileException("Unable to open file");
+        }
+ 
+        transforms_ = cave::loadValueVector<Transform>(in);
+        weights_ = cave::loadSerializableVector<Matrix>(in);
+        biases_ = cave::loadSerializableVector<Matrix>(in);
+        weightIndices_ = cave::loadValueVector<int>(in);
+        scaleInitialWeights_ = cave::loadValue<double>(in);
+        initialLearningRate_ = cave::loadValue<double>(in);
+        finalLearningRate_ = cave::loadValue<double>(in);
+        epochs_ = cave::loadValue<int>(in);
+        threads_ = cave::loadValue<int>(in);
+        in.close();
+
+        if (!in)
+        {
+            throw FileException("Unable to close file");
+        }
     }
 
     void NeuralNet::add(NeuralNet::Transform transform, int rows, int cols)
@@ -162,7 +229,18 @@ namespace cave
 
     double NeuralNet::evaluate(std::vector<Matrix> &inputs, std::vector<Matrix> &expecteds)
     {
-        return 0;
+        int totalCorrect = 0;
+        int totalItems = 0;
+
+        for (int i = 0; i < inputs.size(); ++i)
+        {
+            BatchResult result = runBatch(inputs[i], expecteds[i]);
+
+            totalCorrect += result.numberCorrect;
+            totalItems += result.numberItems;
+        }
+
+        return double(totalCorrect) / totalItems;
     }
 
     void NeuralNet::fit(std::vector<Matrix> &inputs, std::vector<Matrix> &expecteds)
@@ -213,6 +291,12 @@ namespace cave
 
         result.io.push_back(input);
 
+        auto timing1 = gProfiler.start("acquiring lock");
+        std::unique_lock<std::mutex> lock(mtxWeights_);
+        gProfiler.end(timing1);
+        auto weights(weights_);
+        lock.unlock();
+
         int ioIndex = 0;
 
         for (Transform transform : transforms_)
@@ -226,9 +310,11 @@ namespace cave
                 Matrix &weight = weights_[weightIndex];
                 Matrix &bias = biases_[weightIndex];
 
-                std::unique_lock<std::mutex> lock(mtxWeights_);
-                result.io.push_back(weight * output);
-                lock.unlock();
+                auto timing3 = gProfiler.start("weight * output");
+                Matrix multiplicationResult = weight * output;
+                gProfiler.end(timing3);
+
+                result.io.push_back(multiplicationResult);
 
                 result.io.back().modify([&](int row, int col, int index, double value)
                                         { return value + bias.get(row); });
@@ -282,8 +368,9 @@ namespace cave
                 if (bInputError || weightIt != weights_.rend())
                 {
                     std::unique_lock<std::mutex> lock(mtxWeights_);
-                    error = weight.transpose() * batchResult.errors.front();
+                    Matrix transpose = weight.transpose();
                     lock.unlock();
+                    error = transpose * batchResult.errors.front();
                 }
                 else
                 {
@@ -322,24 +409,17 @@ namespace cave
     void NeuralNet::adjust(BatchResult &batchResult, double learningRate)
     {
         auto timing = gProfiler.start("adjust");
+
         for (std::size_t i = 0; i < weights_.size(); ++i)
         {
             int weightIndex = weightIndices_[i];
 
-            Matrix &weight = weights_[i];
-            Matrix &bias = biases_[i];
             Matrix &error = batchResult.errors[weightIndex + 1];
             Matrix &input = batchResult.io[weightIndex];
 
-            Matrix biasAdjust = learningRate * error.rowMeans();
-            Matrix weightAdjust = (double(learningRate) / input.cols()) * (error * input.transpose());
-
             std::unique_lock<std::mutex> lock(mtxWeights_);
-            bias.modify([&](int row, int col, int index, double value)
-                        { return value - biasAdjust.get(row); });
-
-            weight.modify([&](int row, int col, int index, double value)
-                          { return value - weightAdjust.get(index); });
+            biases_[i] -= learningRate * error.rowMeans();
+            weights_[i] -= (double(learningRate) / input.cols()) * (error * input.transpose());
             lock.unlock();
         }
 

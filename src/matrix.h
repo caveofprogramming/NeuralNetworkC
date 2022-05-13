@@ -4,10 +4,12 @@
 #include <string>
 #include <functional>
 #include <iostream>
+#include <fstream>
+#include "fileutil.h"
 
 namespace cave
 {
-    class Matrix
+    class Matrix: public Serializable
     {
     private:
         int rows_{0};
@@ -47,6 +49,9 @@ namespace cave
             modify([&](int row, int col, int index, double value)
                    { return init(row, col, index); });
         }
+
+        void save(std::ostream &out);
+        void load(std::istream &in);
 
         Matrix transpose() const;
         Matrix colSums();
@@ -95,6 +100,7 @@ namespace cave
         friend Matrix operator-(Matrix const &m1, Matrix const &m2);
         friend Matrix operator*(Matrix const &m1, Matrix const &m2);
         friend Matrix operator*(double a, Matrix const &m);
+        friend Matrix operator-=(Matrix &m1, const Matrix &m2);
 
         // TODO remove this later.
         Matrix clone() {

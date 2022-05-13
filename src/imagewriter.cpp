@@ -4,6 +4,7 @@
 #include <iostream>
 #include <sstream>
 #include <cmath>
+#include <assert.h>
 #include "bitmapfileheader.h"
 #include "bitmapinfoheader.h"
 
@@ -17,7 +18,7 @@ namespace cave
 
         int batchSize = data.input[0].cols();
 
-        cols_ = 100;
+        cols_ = 40;
         rows_ = batchSize / cols_;
 
         assert(rows_ * cols_ == batchSize);

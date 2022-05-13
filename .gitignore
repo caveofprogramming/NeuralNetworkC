@@ -1,4 +1,8 @@
+**/*.json
+**/.DS_Store
 **/*.bmp
+**/*.ann
+
 
 build/
 # Prerequisites
